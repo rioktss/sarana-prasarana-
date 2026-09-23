@@ -1,0 +1,13 @@
+<?php $title='Detail Pengaduan - SIPAS'; $menu='histori'; require __DIR__ . '/../layout/header.php'; ?>
+<a class="link" href="index.php?page=histori" style="display:inline-block;margin-bottom:16px;">← Kembali ke histori</a>
+<div class="detail-grid">
+    <div>
+        <div class="card"><div class="card-body"><div class="toolbar" style="justify-content:space-between;"><?= statusBadge($pengaduan['status']) ?><span class="small muted">#<?= (int)$pengaduan['id_pengaduan'] ?> · <?= e(formatTanggal($pengaduan['tanggal_pengaduan'])) ?></span></div><h2 style="margin:14px 0 8px;font-size:25px;"><?= e($pengaduan['judul_pengaduan']) ?></h2><p style="margin:0;line-height:1.7;color:#475569;white-space:pre-line;"><?= e($pengaduan['isi_pengaduan']) ?></p></div></div>
+        <div class="card" style="margin-top:18px;"><div class="card-body"><h3 style="margin:0 0 16px;">Progres Pengaduan</h3><?php if(empty($progres)): ?><div class="empty">Belum ada progres.</div><?php else: ?><div class="timeline"><?php foreach($progres as $item): ?><div class="timeline-item"><span class="timeline-dot"></span><h4><?= e($item['status_progres']) ?></h4><?php if($item['keterangan']): ?><div class="small muted" style="line-height:1.6;margin-bottom:3px;"><?= e($item['keterangan']) ?></div><?php endif; ?><small><?= e(formatTanggal($item['tanggal_progres'])) ?></small></div><?php endforeach; ?></div><?php endif; ?></div></div>
+    </div>
+    <div>
+        <div class="card"><div class="card-body"><h3 style="margin:0 0 10px;">Umpan Balik</h3><?php if($feedback): ?><div class="feedback-box"><?= nl2br(e($feedback['isi_feedback'])) ?><div class="small muted" style="margin-top:8px;">Diberikan <?= e(formatTanggal($feedback['tanggal_feedback'])) ?></div></div><?php elseif($pengaduan['status']==='Selesai'): ?><p class="muted" style="line-height:1.6;">Pengaduan sudah selesai. Berikan feedback untuk penanganannya.</p><form method="post" action="index.php?page=simpan-feedback"><input type="hidden" name="id_pengaduan" value="<?= (int)$pengaduan['id_pengaduan'] ?>"><div class="form-group"><textarea class="textarea" name="isi_feedback" placeholder="Contoh: Perbaikan sudah rapi, terima kasih." required></textarea></div><button class="btn btn-success" type="submit" style="width:100%;">Kirim Feedback</button></form><?php else: ?><div class="empty">Feedback tersedia setelah status pengaduan menjadi <b>Selesai</b>.</div><?php endif; ?></div></div>
+        <div class="card" style="margin-top:18px;"><div class="card-body"><div class="small muted">Tips</div><p style="margin:6px 0 0;color:#475569;line-height:1.6;">Buka kembali halaman ini kapan saja untuk melihat perubahan status dan riwayat progres.</p></div></div>
+    </div>
+</div>
+<?php require __DIR__ . '/../layout/footer.php'; ?>
