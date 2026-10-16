@@ -7,7 +7,56 @@ function redirect($page, $params = []) {
 }
 
 function e($value) {
-    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+    return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+function textLength($text) {
+    $text = (string) $text;
+    if (function_exists('mb_strlen')) return mb_strlen($text, 'UTF-8');
+    $n = preg_match_all('/./us', $text, $m);
+    return $n === false ? strlen($text) : $n;
+}
+
+function excerpt($text, $length) {
+    $text = (string) $text;
+    $length = (int) $length;
+    if (textLength($text) <= $length) return $text;
+
+    if (function_exists('mb_substr')) {
+        return mb_substr($text, 0, $length, 'UTF-8') . '...';
+    }
+
+    if (preg_match('/^.{0,' . $length . '}/us', $text, $m)) {
+        return $m[0] . '...';
+    }
+
+    return substr($text, 0, $length) . '...';
+}
+
+function ensureFeedbackSchema($db) {
+    if (!empty($_SESSION['schema_feedback_ok'])) return;
+
+    try {
+        $cols = $db->query("SHOW COLUMNS FROM umpan_balik LIKE 'pemberi'")->fetchAll();
+
+        if (empty($cols)) {
+            $db->exec("ALTER TABLE umpan_balik ADD COLUMN pemberi ENUM('admin','siswa') NOT NULL DEFAULT 'siswa' AFTER id_pengaduan");
+
+            $idx = $db->query("SHOW INDEX FROM umpan_balik WHERE Key_name = 'idx_feedback_pengaduan'")->fetchAll();
+            if (empty($idx)) {
+                $db->exec('ALTER TABLE umpan_balik ADD INDEX idx_feedback_pengaduan (id_pengaduan)');
+            }
+
+            $uq = $db->query("SHOW INDEX FROM umpan_balik WHERE Key_name = 'uq_feedback_pengaduan'")->fetchAll();
+            if (!empty($uq)) {
+                $db->exec('ALTER TABLE umpan_balik DROP INDEX uq_feedback_pengaduan');
+            }
+        }
+
+        $_SESSION['schema_feedback_ok'] = true;
+    } catch (Exception $e) {
+        exit('Struktur database belum sesuai. Import database/pengaduan_sekolah.sql atau jalankan database/migrasi_umpan_balik_admin.sql, lalu muat ulang halaman. Detail: ' . $e->getMessage());
+    }
 }
 
 function formatTanggal($tanggal) {

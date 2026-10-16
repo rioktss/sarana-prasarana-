@@ -72,14 +72,29 @@ require __DIR__ . '/../layout/header.php';
         <div class="card card-space-top">
             <div class="card-body">
                 <h3 class="section-title-simple">Umpan Balik</h3>
-                <?php if($feedback): ?>
-                    <div class="feedback-box">
-                        <?= nl2br(e($feedback['isi_feedback'])) ?>
-                        <div class="small muted feedback-date">Diberikan <?= e(formatTanggal($feedback['tanggal_feedback'])) ?></div>
-                    </div>
+                <?php if(empty($feedbacks)): ?>
+                    <div class="empty">Belum ada umpan balik untuk pengaduan ini.</div>
                 <?php else: ?>
-                    <div class="empty">Siswa belum memberikan umpan balik.</div>
+                    <?php foreach($feedbacks as $fb): ?>
+                        <div class="feedback-box feedback-<?= e($fb['pemberi']) ?>">
+                            <div class="feedback-author"><?= $fb['pemberi'] === 'admin' ? 'Tanggapan Admin' : 'Feedback Siswa' ?></div>
+                            <?= nl2br(e($fb['isi_feedback'])) ?>
+                            <div class="small muted feedback-date">Diberikan <?= e(formatTanggal($fb['tanggal_feedback'])) ?></div>
+                        </div>
+                    <?php endforeach; ?>
                 <?php endif; ?>
+
+                <form class="feedback-form" method="post" action="index.php?page=admin-feedback" data-loading>
+                    <input type="hidden" name="id_pengaduan" value="<?= (int)$pengaduan['id_pengaduan'] ?>">
+                    <div class="form-group">
+                        <label class="label required" for="isi_feedback_admin">Beri Umpan Balik</label>
+                        <textarea class="textarea" id="isi_feedback_admin" name="isi_feedback" maxlength="2000" placeholder="Contoh: Laporan sudah kami terima dan akan diperbaiki minggu ini." required></textarea>
+                        <div class="helper">Tanggapan ini akan tampil di halaman detail pengaduan milik siswa.</div>
+                    </div>
+                    <button class="btn btn-success full-width" type="submit" data-loading-label="Mengirim...">
+                        <?= uiIcon('send') ?><span>Kirim Umpan Balik</span>
+                    </button>
+                </form>
             </div>
         </div>
     </div>

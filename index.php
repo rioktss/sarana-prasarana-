@@ -15,6 +15,7 @@ require_once __DIR__ . '/controllers/SiswaController.php';
 
 $page = isset($_GET['page']) ? $_GET['page'] : (isset($_SESSION['id_user']) ? 'dashboard' : 'login');
 $db = (new Database())->getConnection();
+ensureFeedbackSchema($db);
 
 $publicPages = ['login', 'proses-login', 'register', 'proses-register'];
 if (!in_array($page, $publicPages, true) && $page !== 'logout' && !isset($_SESSION['id_user'])) {
@@ -70,6 +71,10 @@ switch ($page) {
 
     case 'simpan-feedback':
         (new PengaduanController($db))->saveFeedback();
+        break;
+
+    case 'admin-feedback':
+        (new PengaduanController($db))->saveAdminFeedback();
         break;
 
     case 'kelola-siswa':

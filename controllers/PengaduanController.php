@@ -41,7 +41,7 @@ class PengaduanController
         view('admin/detail', [
             'pengaduan' => $data,
             'progres' => $this->progres->findByPengaduan($id),
-            'feedback' => $this->feedback->findByPengaduan($id)
+            'feedbacks' => $this->feedback->listByPengaduan($id)
         ]);
     }
 
@@ -54,6 +54,11 @@ class PengaduanController
 
         if ($id <= 0 || !in_array($status, $allowed, true)) {
             flash('danger', 'Data status tidak valid.');
+            redirect('admin-pengaduan');
+        }
+
+        if (!$this->pengaduan->findById($id)) {
+            flash('danger', 'Pengaduan tidak ditemukan.');
             redirect('admin-pengaduan');
         }
 
@@ -86,7 +91,7 @@ class PengaduanController
 
         if ($old['judul_pengaduan'] === '' || $old['isi_pengaduan'] === '') {
             $error = 'Judul dan isi pengaduan wajib diisi.';
-        } elseif (strlen($old['judul_pengaduan']) > 150) {
+        } elseif (textLength($old['judul_pengaduan']) > 150) {
             $error = 'Judul maksimal 150 karakter.';
         }
 
@@ -127,7 +132,7 @@ class PengaduanController
         view('siswa/detail', [
             'pengaduan' => $data,
             'progres' => $this->progres->findByPengaduan($id),
-            'feedback' => $this->feedback->findByPengaduan($id)
+            'feedbacks' => $this->feedback->listByPengaduan($id)
         ]);
     }
 
@@ -149,18 +154,51 @@ class PengaduanController
             flash('danger', 'Isi feedback wajib diisi.');
             redirect('siswa-detail', ['id'=>$id]);
         }
-        if ($this->feedback->exists($id)) {
+        if (textLength($isi) > 2000) {
+            flash('danger', 'Feedback maksimal 2000 karakter.');
+            redirect('siswa-detail', ['id'=>$id]);
+        }
+        if ($this->feedback->exists($id, 'siswa')) {
             flash('danger', 'Feedback untuk pengaduan ini sudah pernah diberikan.');
             redirect('siswa-detail', ['id'=>$id]);
         }
 
         try {
-            $this->feedback->create($id, $isi);
+            $this->feedback->create($id, $isi, 'siswa');
             flash('success', 'Terima kasih, feedback berhasil disimpan.');
         } catch (Exception $e) {
             flash('danger', 'Feedback gagal disimpan: ' . $e->getMessage());
         }
 
         redirect('siswa-detail', ['id'=>$id]);
+    }
+
+    public function saveAdminFeedback() {
+        requireLogin('admin');
+        $id = (int) ((isset($_POST['id_pengaduan']) ? $_POST['id_pengaduan'] : 0));
+        $isi = trim((isset($_POST['isi_feedback']) ? $_POST['isi_feedback'] : ''));
+        $data = $id > 0 ? $this->pengaduan->findById($id) : null;
+
+        if (!$data) {
+            flash('danger', 'Pengaduan tidak ditemukan.');
+            redirect('admin-pengaduan');
+        }
+        if ($isi === '') {
+            flash('danger', 'Isi umpan balik wajib diisi.');
+            redirect('admin-detail', ['id'=>$id]);
+        }
+        if (textLength($isi) > 2000) {
+            flash('danger', 'Umpan balik maksimal 2000 karakter.');
+            redirect('admin-detail', ['id'=>$id]);
+        }
+
+        try {
+            $this->feedback->create($id, $isi, 'admin');
+            flash('success', 'Umpan balik berhasil dikirim ke siswa.');
+        } catch (Exception $e) {
+            flash('danger', 'Umpan balik gagal disimpan: ' . $e->getMessage());
+        }
+
+        redirect('admin-detail', ['id'=>$id]);
     }
 }

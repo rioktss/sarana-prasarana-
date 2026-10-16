@@ -21,7 +21,7 @@
                     <?php foreach($histori as $item): ?>
                         <tr>
                             <td><?= (int)$item['id_pengaduan'] ?></td>
-                            <td><strong><?= e($item['judul_pengaduan']) ?></strong><div class="small muted"><?= e(substr($item['isi_pengaduan'],0,75)) ?><?= strlen($item['isi_pengaduan'])>75?'...':'' ?></div></td>
+                            <td><strong><?= e($item['judul_pengaduan']) ?></strong><div class="small muted"><?= e(excerpt($item['isi_pengaduan'], 75)) ?></div></td>
                             <td><?= e(formatTanggal($item['tanggal_pengaduan'])) ?></td>
                             <td><?= statusBadge($item['status']) ?></td>
                             <td><a class="btn btn-primary btn-sm" href="index.php?page=siswa-detail&id=<?= (int)$item['id_pengaduan'] ?>">Detail</a></td>

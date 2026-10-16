@@ -34,7 +34,7 @@
                     <tbody>
                     <?php foreach($terbaru as $item): ?>
                         <tr>
-                            <td><strong><?= e($item['judul_pengaduan']) ?></strong><div class="small muted"><?= e(substr($item['isi_pengaduan'],0,85)) ?><?= strlen($item['isi_pengaduan'])>85?'...':'' ?></div></td>
+                            <td><strong><?= e($item['judul_pengaduan']) ?></strong><div class="small muted"><?= e(excerpt($item['isi_pengaduan'], 85)) ?></div></td>
                             <td><?= e(formatTanggal($item['tanggal_pengaduan'])) ?></td>
                             <td><?= statusBadge($item['status']) ?></td>
                             <td><a class="btn btn-secondary btn-sm" href="index.php?page=siswa-detail&id=<?= (int)$item['id_pengaduan'] ?>">Detail</a></td>

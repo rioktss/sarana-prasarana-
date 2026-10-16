@@ -2,6 +2,10 @@
 $title='Detail Pengaduan - SIPAS';
 $menu='histori';
 $lastProgressIndex = !empty($progres) ? count($progres) - 1 : -1;
+$sudahFeedbackSiswa = false;
+foreach ($feedbacks as $fb) {
+    if ($fb['pemberi'] === 'siswa') $sudahFeedbackSiswa = true;
+}
 require __DIR__ . '/../layout/header.php';
 ?>
 <a class="link page-back" href="index.php?page=histori"><?= uiIcon('arrow-left') ?><span>Kembali ke histori</span></a>
@@ -44,25 +48,28 @@ require __DIR__ . '/../layout/header.php';
         <div class="card">
             <div class="card-body">
                 <h3 class="section-title-simple">Umpan Balik</h3>
-                <?php if($feedback): ?>
-                    <div class="feedback-box">
-                        <?= nl2br(e($feedback['isi_feedback'])) ?>
-                        <div class="small muted feedback-date">Diberikan <?= e(formatTanggal($feedback['tanggal_feedback'])) ?></div>
+                <?php foreach($feedbacks as $fb): ?>
+                    <div class="feedback-box feedback-<?= e($fb['pemberi']) ?>">
+                        <div class="feedback-author"><?= $fb['pemberi'] === 'admin' ? 'Tanggapan Admin' : 'Feedback Kamu' ?></div>
+                        <?= nl2br(e($fb['isi_feedback'])) ?>
+                        <div class="small muted feedback-date">Diberikan <?= e(formatTanggal($fb['tanggal_feedback'])) ?></div>
                     </div>
-                <?php elseif($pengaduan['status']==='Selesai'): ?>
+                <?php endforeach; ?>
+
+                <?php if($pengaduan['status']==='Selesai' && !$sudahFeedbackSiswa): ?>
                     <p class="detail-description detail-description-muted">Pengaduan sudah selesai. Berikan feedback untuk penanganannya.</p>
                     <form method="post" action="index.php?page=simpan-feedback" data-loading>
                         <input type="hidden" name="id_pengaduan" value="<?= (int)$pengaduan['id_pengaduan'] ?>">
                         <div class="form-group">
                             <label class="label required" for="isi_feedback">Feedback</label>
-                            <textarea class="textarea" id="isi_feedback" name="isi_feedback" placeholder="Contoh: Perbaikan sudah rapi, terima kasih." required></textarea>
+                            <textarea class="textarea" id="isi_feedback" name="isi_feedback" maxlength="2000" placeholder="Contoh: Perbaikan sudah rapi, terima kasih." required></textarea>
                         </div>
                         <button class="btn btn-success full-width" type="submit" data-loading-label="Mengirim...">
                             <?= uiIcon('send') ?><span>Kirim Feedback</span>
                         </button>
                     </form>
-                <?php else: ?>
-                    <div class="empty">Feedback tersedia setelah status pengaduan menjadi <b>Selesai</b>.</div>
+                <?php elseif(empty($feedbacks)): ?>
+                    <div class="empty">Belum ada umpan balik. Tanggapan admin akan tampil di sini, dan feedback dari kamu bisa diberikan setelah status pengaduan menjadi <b>Selesai</b>.</div>
                 <?php endif; ?>
             </div>
         </div>
