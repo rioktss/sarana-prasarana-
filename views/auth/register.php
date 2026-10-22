@@ -1,4 +1,15 @@
-<?php $title = 'Registrasi - SIPAS'; require __DIR__ . '/../layout/header.php'; ?>
+<?php 
+/**
+ * FILE: views/auth/register.php
+ * FUNGSI: Template registrasi akun siswa.
+ * ALUR KERJA: Menampilkan form identitas siswa, username, password, dan konfirmasi password, serta mempertahankan input sebelumnya ketika validasi gagal.
+ * INPUT / OUTPUT: Input: `$old` dan `$error`. Output: HTML form POST ke route proses-register.
+ * FILE/TABEL TERKAIT: controllers/AuthController.php, models/UserModel.php, models/SiswaModel.php, assets/app.js, views/layout/*.php
+ * KEAMANAN OUTPUT: Teks dinamis di konteks HTML menggunakan e() untuk meng-escape karakter khusus dan membantu mencegah XSS; ID yang ditampilkan sebagai angka dikonversi ke integer.
+ * CATATAN FORM: Atribut HTML membantu validasi awal; setCustomValidity() berada di assets/app.js dan tidak menggantikan validasi server.
+ * CATATAN PEMBELAJARAN: komentar ini menjelaskan kode yang ada; perilaku program sengaja dipertahankan.
+ */
+$title = 'Registrasi - SIPAS'; require __DIR__ . '/../layout/header.php'; ?>
 <div class="auth-card">
     <div class="auth-hero">
         <div class="brand-icon" aria-hidden="true">S</div>
@@ -15,7 +26,7 @@
         <h1>Daftar Akun</h1>
         <div class="sub">Lengkapi data berikut untuk membuat akun siswa.</div>
 
-        <?php if (!empty($error)): ?>
+        <?php /* required/minlength membantu UX. data-match pada konfirmasi diproses assets/app.js dengan setCustomValidity(); perbandingan password tetap diulang server oleh AuthController. */ if (!empty($error)): ?>
             <div class="alert alert-error" role="alert">
                 <span class="alert-icon"><?= uiIcon('alert') ?></span>
                 <div class="alert-content"><?= e($error) ?></div>

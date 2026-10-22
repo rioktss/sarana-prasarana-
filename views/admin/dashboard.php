@@ -1,4 +1,14 @@
-<?php $title='Dashboard Admin - SIPAS'; $menu='dashboard'; require __DIR__ . '/../layout/header.php'; ?>
+<?php 
+/**
+ * FILE: views/admin/dashboard.php
+ * FUNGSI: Template dashboard khusus admin.
+ * ALUR KERJA: Menampilkan statistik total/status pengaduan, daftar laporan terbaru, jumlah siswa, dan pintasan ke filter laporan. Data sudah disiapkan DashboardController.
+ * INPUT / OUTPUT: Input: `$stats`, `$totalSiswa`, `$terbaru`. Output: HTML dashboard admin.
+ * FILE/TABEL TERKAIT: controllers/DashboardController.php, views/layout/header.php, views/layout/footer.php, helpers.php
+ * KEAMANAN OUTPUT: Teks dinamis di konteks HTML menggunakan e() untuk meng-escape karakter khusus dan membantu mencegah XSS; ID yang ditampilkan sebagai angka dikonversi ke integer.
+ * CATATAN PEMBELAJARAN: komentar ini menjelaskan kode yang ada; perilaku program sengaja dipertahankan.
+ */
+$title='Dashboard Admin - SIPAS'; $menu='dashboard'; require __DIR__ . '/../layout/header.php'; ?>
 <div class="card welcome page-space-after">
     <div class="card-body">
         <h2>Dashboard Admin</h2>
@@ -45,10 +55,10 @@
                         <tbody>
                         <?php foreach ($terbaru as $row): ?>
                             <tr>
-                                <td><strong><?= e($row['nama_siswa']) ?></strong><div class="small muted"><?= e($row['kelas']) ?></div></td>
+                                <td><strong><?= /* Nama pelapor berasal dari database; e() menjaga nilainya tetap teks HTML dan bukan markup. */ e($row['nama_siswa']) ?></strong><div class="small muted"><?= e($row['kelas']) ?></div></td>
                                 <td><?= e($row['judul_pengaduan']) ?></td>
                                 <td><?= e(formatTanggal($row['tanggal_pengaduan'])) ?></td>
-                                <td><?= statusBadge($row['status']) ?></td>
+                                <td><?= /* statusBadge memakai allowlist kelas dan melakukan escaping pada teks status. */ statusBadge($row['status']) ?></td>
                                 <td><a class="btn btn-secondary btn-sm" href="index.php?page=admin-detail&id=<?= (int)$row['id_pengaduan'] ?>">Detail</a></td>
                             </tr>
                         <?php endforeach; ?>

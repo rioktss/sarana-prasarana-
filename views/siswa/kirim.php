@@ -1,4 +1,15 @@
-<?php $title='Kirim Pengaduan - SIPAS'; $menu='kirim'; require __DIR__ . '/../layout/header.php'; ?>
+<?php 
+/**
+ * FILE: views/siswa/kirim.php
+ * FUNGSI: Template formulir pengajuan pengaduan baru.
+ * ALUR KERJA: Mengisi kembali judul/isi lama bila validasi gagal dan mengirim laporan ke controller untuk divalidasi ulang serta disimpan.
+ * INPUT / OUTPUT: Input: `$error` dan `$old`. Output: HTML form POST proses-pengaduan.
+ * FILE/TABEL TERKAIT: controllers/PengaduanController.php, models/PengaduanModel.php, assets/app.js, views/layout/*.php
+ * KEAMANAN OUTPUT: Teks dinamis di konteks HTML menggunakan e() untuk meng-escape karakter khusus dan membantu mencegah XSS; ID yang ditampilkan sebagai angka dikonversi ke integer.
+ * CATATAN FORM: required/maxlength membantu UX, tetapi controller melakukan validasi server sebelum insert.
+ * CATATAN PEMBELAJARAN: komentar ini menjelaskan kode yang ada; perilaku program sengaja dipertahankan.
+ */
+$title='Kirim Pengaduan - SIPAS'; $menu='kirim'; require __DIR__ . '/../layout/header.php'; ?>
 <a class="link page-back" href="index.php?page=dashboard"><?= uiIcon('arrow-left') ?><span>Kembali ke dashboard</span></a>
 
 <div class="card form-card form-card-narrow">
@@ -8,7 +19,7 @@
             <p>Jelaskan kerusakan, lokasi, dan kondisi sarana yang ingin dilaporkan.</p>
         </div>
 
-        <?php if($error): ?>
+        <?php /* required membantu pengguna mengisi form, sedangkan controller memvalidasi lagi kolom kosong dan batas judul di server. */ if($error): ?>
             <div class="alert alert-error" role="alert">
                 <span class="alert-icon"><?= uiIcon('alert') ?></span>
                 <div class="alert-content"><?= e($error) ?></div>

@@ -1,8 +1,18 @@
-<?php $title='Dashboard Siswa - SIPAS'; $menu='dashboard'; require __DIR__ . '/../layout/header.php'; ?>
+<?php 
+/**
+ * FILE: views/siswa/dashboard.php
+ * FUNGSI: Template dashboard untuk pengguna role siswa.
+ * ALUR KERJA: Menampilkan sapaan siswa, ringkasan jumlah pengaduan, dan beberapa pengaduan terbaru milik akun yang sedang login.
+ * INPUT / OUTPUT: Input: `$total`, `$berjalan`, `$selesai`, `$terbaru` dan session profil. Output: HTML dashboard siswa.
+ * FILE/TABEL TERKAIT: controllers/DashboardController.php, models/PengaduanModel.php, views/layout/*.php, helpers.php
+ * KEAMANAN OUTPUT: Teks dinamis di konteks HTML menggunakan e() untuk meng-escape karakter khusus dan membantu mencegah XSS; ID yang ditampilkan sebagai angka dikonversi ke integer.
+ * CATATAN PEMBELAJARAN: komentar ini menjelaskan kode yang ada; perilaku program sengaja dipertahankan.
+ */
+$title='Dashboard Siswa - SIPAS'; $menu='dashboard'; require __DIR__ . '/../layout/header.php'; ?>
 <div class="card welcome page-space-after">
     <div class="card-body">
-        <h2>Halo, <?= e(isset($_SESSION['nama_siswa']) ? $_SESSION['nama_siswa'] : (isset($_SESSION['username']) ? $_SESSION['username'] : '')) ?></h2>
-        <p><?= e(isset($_SESSION['kelas']) ? $_SESSION['kelas'] : '') ?> · Sampaikan kerusakan sarana sekolah dengan mudah.</p>
+        <h2>Halo, <?= /* Nama/username dari session ditampilkan sebagai teks ter-escape, bukan markup HTML. */ e(isset($_SESSION['nama_siswa']) ? $_SESSION['nama_siswa'] : (isset($_SESSION['username']) ? $_SESSION['username'] : '')) ?></h2>
+        <p><?= /* Kelas dari session ditampilkan sebagai teks yang di-escape, bukan sebagai HTML aktif. */ e(isset($_SESSION['kelas']) ? $_SESSION['kelas'] : '') ?> · Sampaikan kerusakan sarana sekolah dengan mudah.</p>
     </div>
     <div class="card-body welcome-action"><a class="btn btn-primary" href="index.php?page=kirim-pengaduan"><?= uiIcon('plus') ?><span>Buat Pengaduan</span></a></div>
 </div>

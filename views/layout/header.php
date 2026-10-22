@@ -1,6 +1,20 @@
 <?php
+
+/**
+ * FILE: views/layout/header.php
+ * FUNGSI: Template pembuka layout bersama SIPAS.
+ * ALUR KERJA: Mengambil flash message satu kali, membaca role/nama session, lalu menampilkan struktur HTML awal, navigasi yang sesuai role, notifikasi, dan aset CSS/JavaScript.
+ * INPUT / OUTPUT: Input: session, `$title`, `$menu`, flash message. Output: dokumen HTML pembuka hingga area konten.
+ * FILE/TABEL TERKAIT: helpers.php, assets/style.css, assets/app.js, views/layout/footer.php, seluruh view
+ * KEAMANAN OUTPUT: Teks dinamis di konteks HTML menggunakan e() untuk meng-escape karakter khusus dan membantu mencegah XSS; ID yang ditampilkan sebagai angka dikonversi ke integer.
+ * CATATAN PEMBELAJARAN: komentar ini menjelaskan kode yang ada; perilaku program sengaja dipertahankan.
+ */
+// Pesan flash disimpan di session agar tetap tersedia setelah redirect, lalu ditampilkan sekali oleh layout/header.php.
+/* flash() mengambil notifikasi sekali lalu menghapusnya dari session agar tidak muncul berulang setelah refresh. */
 $flash = flash();
+// Role disimpan pada session agar controller/layout dapat menerapkan akses dan navigasi yang sesuai.
 $role = isset($_SESSION['role']) ? $_SESSION['role'] : null;
+// Data session digunakan untuk menjaga konteks login/pengguna antarrekuest HTTP.
 $name = isset($_SESSION['nama_siswa']) ? $_SESSION['nama_siswa'] : (isset($_SESSION['username']) ? $_SESSION['username'] : 'Pengguna');
 $isAdmin = $role === 'admin';
 $menu = isset($menu) ? $menu : '';
@@ -22,7 +36,7 @@ $flashIcon = $flash && $flash['type'] === 'success' ? 'check' : ($flash && $flas
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#2f4cff">
-    <title><?= e($title) ?></title>
+    <title><?= /* Judul dinamis di-escape karena nilai dinamis yang masuk konteks HTML harus dinetralkan sebelum dirender. */ e($title) ?></title>
     <link rel="stylesheet" href="assets/style.css">
     <script src="assets/app.js" defer></script>
 </head>

@@ -1,4 +1,15 @@
 <?php
+
+/**
+ * FILE: views/admin/detail.php
+ * FUNGSI: Template detail pengaduan untuk admin.
+ * ALUR KERJA: Menampilkan identitas laporan, riwayat progres, formulir update status, dan daftar/form umpan balik admin.
+ * INPUT / OUTPUT: Input: `$pengaduan`, `$progres`, `$feedbacks`. Output: HTML detail dan form POST untuk update status/feedback.
+ * FILE/TABEL TERKAIT: controllers/PengaduanController.php, models/PengaduanModel.php, models/ProgresModel.php, models/FeedbackModel.php, views/layout/*.php
+ * KEAMANAN OUTPUT: Teks dinamis di konteks HTML menggunakan e() untuk meng-escape karakter khusus dan membantu mencegah XSS; ID yang ditampilkan sebagai angka dikonversi ke integer.
+ * CATATAN FORM: Status yang muncul pada select bukan batas keamanan; controller memakai whitelist status saat POST diterima.
+ * CATATAN PEMBELAJARAN: komentar ini menjelaskan kode yang ada; perilaku program sengaja dipertahankan.
+ */
 $title='Detail Pengaduan - SIPAS';
 $menu='pengaduan';
 $lastProgressIndex = !empty($progres) ? count($progres) - 1 : -1;
@@ -15,7 +26,7 @@ require __DIR__ . '/../layout/header.php';
                     <span class="small muted">#<?= (int)$pengaduan['id_pengaduan'] ?> · <?= e(formatTanggal($pengaduan['tanggal_pengaduan'])) ?></span>
                 </div>
                 <h2 class="detail-title"><?= e($pengaduan['judul_pengaduan']) ?></h2>
-                <p class="detail-description"><?= e($pengaduan['isi_pengaduan']) ?></p>
+                <p class="detail-description"><?= /* Isi laporan berasal dari pengguna; e() membantu mencegah teks HTML/script diperlakukan sebagai markup aktif. */ e($pengaduan['isi_pengaduan']) ?></p>
                 <div class="detail-item detail-reporter">
                     <label>Pelapor</label>
                     <strong><?= e($pengaduan['nama_siswa']) ?></strong>
@@ -54,7 +65,7 @@ require __DIR__ . '/../layout/header.php';
                     <div class="form-group">
                         <label class="label required" for="status_pengaduan">Status Pengaduan</label>
                         <select class="select" id="status_pengaduan" name="status" required>
-                            <?php foreach(['Diajukan','Diproses','Selesai','Ditolak'] as $st): ?>
+                            <?php /* Form menampilkan status dari daftar tetap; controller tetap memvalidasi whitelist yang sama di server. */ foreach(['Diajukan','Diproses','Selesai','Ditolak'] as $st): ?>
                                 <option value="<?= e($st) ?>" <?= $pengaduan['status']===$st?'selected':'' ?>><?= e($st) ?></option>
                             <?php endforeach; ?>
                         </select>

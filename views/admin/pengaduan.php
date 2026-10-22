@@ -1,11 +1,21 @@
-<?php $title='Data Pengaduan - SIPAS'; $menu='pengaduan'; require __DIR__ . '/../layout/header.php'; ?>
+<?php 
+/**
+ * FILE: views/admin/pengaduan.php
+ * FUNGSI: Template daftar pengaduan di sisi admin.
+ * ALUR KERJA: Menampilkan tabel laporan dan tautan filter berdasarkan status. Pemilihan data dilakukan oleh controller/model, bukan oleh template.
+ * INPUT / OUTPUT: Input: `$list` dan `$status`. Output: HTML tabel atau pesan daftar kosong.
+ * FILE/TABEL TERKAIT: controllers/PengaduanController.php, helpers.php, views/layout/*.php
+ * KEAMANAN OUTPUT: Teks dinamis di konteks HTML menggunakan e() untuk meng-escape karakter khusus dan membantu mencegah XSS; ID yang ditampilkan sebagai angka dikonversi ke integer.
+ * CATATAN PEMBELAJARAN: komentar ini menjelaskan kode yang ada; perilaku program sengaja dipertahankan.
+ */
+$title='Data Pengaduan - SIPAS'; $menu='pengaduan'; require __DIR__ . '/../layout/header.php'; ?>
 <div class="page-actions">
     <div><h2>Data Pengaduan</h2><div class="small muted">Daftar laporan sarana dan prasarana dari siswa.</div></div>
 </div>
 
 <div class="toolbar filter-toolbar" aria-label="Filter status pengaduan">
     <a class="btn <?= $status === '' ? 'btn-primary' : 'btn-secondary' ?> btn-sm" href="index.php?page=admin-pengaduan">Semua</a>
-    <?php foreach(['Diajukan','Diproses','Selesai','Ditolak'] as $st): ?>
+    <?php /* Loop menampilkan status dari daftar tetap aplikasi; URL memakai urlencode dan teks tampilannya di-escape dengan e(). */  foreach(['Diajukan','Diproses','Selesai','Ditolak'] as $st): ?>
         <a class="btn <?= $status===$st ? 'btn-primary' : 'btn-secondary' ?> btn-sm" href="index.php?page=admin-pengaduan&status=<?= urlencode($st) ?>"><?= e($st) ?></a>
     <?php endforeach; ?>
 </div>

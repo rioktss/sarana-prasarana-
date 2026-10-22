@@ -1,4 +1,15 @@
 <?php
+
+/**
+ * FILE: views/siswa/detail.php
+ * FUNGSI: Template detail pengaduan untuk siswa.
+ * ALUR KERJA: Menampilkan detail laporan, progres, feedback, dan form feedback yang hanya ditawarkan setelah status selesai serta belum ada feedback siswa.
+ * INPUT / OUTPUT: Input: `$pengaduan`, `$progres`, `$feedbacks`. Output: HTML detail dan form POST feedback.
+ * FILE/TABEL TERKAIT: controllers/PengaduanController.php, models/FeedbackModel.php, views/layout/*.php, helpers.php
+ * KEAMANAN OUTPUT: Teks dinamis di konteks HTML menggunakan e() untuk meng-escape karakter khusus dan membantu mencegah XSS; ID yang ditampilkan sebagai angka dikonversi ke integer.
+ * CATATAN FORM: ID pengaduan pada form tidak membuktikan kepemilikan; controller membandingkan id_siswa dengan session.
+ * CATATAN PEMBELAJARAN: komentar ini menjelaskan kode yang ada; perilaku program sengaja dipertahankan.
+ */
 $title='Detail Pengaduan - SIPAS';
 $menu='histori';
 $lastProgressIndex = !empty($progres) ? count($progres) - 1 : -1;
@@ -16,7 +27,7 @@ require __DIR__ . '/../layout/header.php';
             <div class="card-body">
                 <div class="detail-topline">
                     <?= statusBadge($pengaduan['status']) ?>
-                    <span class="small muted">#<?= (int)$pengaduan['id_pengaduan'] ?> · <?= e(formatTanggal($pengaduan['tanggal_pengaduan'])) ?></span>
+                    <span class="small muted">#<?= /* ID menghubungkan feedback ke laporan; controller juga memastikan laporan dimiliki siswa aktif. */ (int)$pengaduan['id_pengaduan'] ?> · <?= e(formatTanggal($pengaduan['tanggal_pengaduan'])) ?></span>
                 </div>
                 <h2 class="detail-title"><?= e($pengaduan['judul_pengaduan']) ?></h2>
                 <p class="detail-description"><?= e($pengaduan['isi_pengaduan']) ?></p>

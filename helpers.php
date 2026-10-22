@@ -1,14 +1,46 @@
 <?php
 
+
+/**
+ * FILE: helpers.php
+ * FUNGSI: Kumpulan fungsi bantuan umum yang dipakai controller dan view.
+ * ALUR KERJA: Menyediakan redirect, escaping HTML, pengukuran teks, potongan teks, penyesuaian skema feedback, format tanggal, ikon, badge status, flash message, pengecekan login, dan pemanggilan view.
+ * INPUT / OUTPUT: Input: nilai dari controller/session/database. Output: teks aman untuk HTML, response redirect, status akses, atau template view.
+ * FILE/TABEL TERKAIT: index.php, seluruh file controller, models/FeedbackModel.php, seluruh template di folder views, assets/app.js
+ * CATATAN PEMBELAJARAN: komentar ini menjelaskan kode yang ada; perilaku program sengaja dipertahankan.
+ */
+/**
+ * Mengarahkan browser ke route SIPAS dan mengakhiri request saat ini.
+ * @param string $page Nama route yang akan ditangani parameter `page` di index.php.
+ * @param array $params Parameter tambahan yang akan ditambahkan ke query string; default berupa array kosong.
+ * @return void Fungsi menjalankan `exit`, sehingga eksekusi request berhenti setelah redirect.
+ * Alasan desain: http_build_query mengubah array menjadi query string dengan encoding yang tepat. exit mencegah controller meneruskan proses setelah mengirim header Location.
+ */
 function redirect($page, $params = []) {
     $query = array_merge(['page' => $page], $params);
+    // Mengirim header HTTP Location untuk meminta browser membuka URL tujuan; harus dilakukan sebelum output HTML.
     header('Location: index.php?' . http_build_query($query));
     exit;
 }
 
+/**
+ * Mengubah nilai dinamis menjadi teks aman untuk konteks HTML.
+ * @param mixed $value Nilai dari database, session, atau input yang hendak ditampilkan.
+ * @return string Teks yang telah di-escape untuk HTML.
+ * Alasan desain: htmlspecialchars menetralkan karakter seperti <, >, tanda kutip, dan ampersand sehingga teks tidak ditafsirkan sebagai tag atau atribut HTML. ENT_QUOTES mencakup dua jenis kutip, ENT_SUBSTITUTE menangani byte UTF-8 tidak valid, dan UTF-8 disetel eksplisit. Ini membantu mencegah XSS ketika hasilnya dipakai pada HTML; tetap gunakan sesuai konteks output.
+ */
+
 function e($value) {
+    // Escape karakter khusus HTML sebelum ditampilkan untuk mencegah teks dinamis dibaca browser sebagai markup/script (mitigasi XSS).
     return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
+
+/**
+ * Menghitung panjang teks dengan memperhatikan karakter UTF-8.
+ * @param string $text Teks yang akan dihitung.
+ * @return int Jumlah karakter, bukan semata jumlah byte, jika dukungan yang tersedia memungkinkan.
+ * Alasan desain: mb_strlen lebih sesuai untuk huruf beraksen/karakter multibyte. Fallback regex mencoba menghitung karakter Unicode, kemudian strlen menjadi pilihan terakhir agar fungsi tetap tersedia pada server tanpa ekstensi mbstring.
+ */
 
 function textLength($text) {
     $text = (string) $text;
@@ -17,9 +49,18 @@ function textLength($text) {
     return $n === false ? strlen($text) : $n;
 }
 
+/**
+ * Memotong teks untuk ringkasan dengan akhiran elipsis.
+ * @param string $text Teks asal.
+ * @param int $length Panjang ringkasan yang diinginkan.
+ * @return string Teks utuh atau potongan teks yang diakhiri `...`.
+ * Alasan desain: Pemeriksaan panjang lebih dulu mencegah teks pendek dipotong sia-sia. mb_substr/regex dipilih untuk sebisa mungkin tidak memotong karakter UTF-8 di tengah byte.
+ */
+
 function excerpt($text, $length) {
     $text = (string) $text;
     $length = (int) $length;
+    // Pemeriksaan panjang memakai jumlah karakter UTF-8. Pada input form, batas ini tetap ditegakkan di server karena batas HTML bisa dilewati.
     if (textLength($text) <= $length) return $text;
 
     if (function_exists('mb_substr')) {
@@ -33,31 +74,54 @@ function excerpt($text, $length) {
     return substr($text, 0, $length) . '...';
 }
 
+/**
+ * Memastikan kolom dan indeks yang dibutuhkan fitur feedback tersedia.
+ * @param PDO $db Koneksi database aktif yang berasal dari Database::getConnection().
+ * @return void Tidak mengembalikan nilai; menandai sesi bila pengecekan berhasil.
+ * Alasan desain: Pengecekan kolom/indeks membuat project lama dapat menyesuaikan skema yang diharapkan. Penanda session menghindari pemeriksaan DDL berulang pada setiap halaman dalam sesi yang sama. Ini adalah penyesuaian skema saat runtime; pada produksi, migrasi terencana biasanya lebih mudah diaudit.
+ */
+
 function ensureFeedbackSchema($db) {
+    // Data session digunakan untuk menjaga konteks login/pengguna antarrekuest HTTP.
     if (!empty($_SESSION['schema_feedback_ok'])) return;
 
     try {
+        // SQL: SHOW COLUMNS memeriksa apakah kolom `pemberi` telah tersedia sebelum migrasi dijalankan, supaya ALTER TABLE tidak dilakukan tanpa kebutuhan.
         $cols = $db->query("SHOW COLUMNS FROM umpan_balik LIKE 'pemberi'")->fetchAll();
 
         if (empty($cols)) {
+            // SQL: ALTER TABLE menambahkan jenis pihak pemberi agar feedback admin dan siswa dapat dibedakan. Default `siswa` mempertahankan kompatibilitas record lama; perubahan skema semacam ini sebaiknya dikelola dengan migrasi terencana saat deployment.
             $db->exec("ALTER TABLE umpan_balik ADD COLUMN pemberi ENUM('admin','siswa') NOT NULL DEFAULT 'siswa' AFTER id_pengaduan");
 
+            // SQL: SHOW INDEX memeriksa apakah indeks berdasarkan id_pengaduan sudah tersedia sehingga indeks tidak ditambahkan berulang kali.
             $idx = $db->query("SHOW INDEX FROM umpan_balik WHERE Key_name = 'idx_feedback_pengaduan'")->fetchAll();
             if (empty($idx)) {
+                // SQL: Indeks pada id_pengaduan membantu query feedback yang sering memfilter berdasarkan satu pengaduan; indeks bukan pengganti WHERE, tetapi dapat mempercepat pencarian.
                 $db->exec('ALTER TABLE umpan_balik ADD INDEX idx_feedback_pengaduan (id_pengaduan)');
             }
 
+            // SQL: SHOW INDEX mencari indeks unik lama yang membatasi satu baris feedback per pengaduan tanpa membedakan pemberi.
             $uq = $db->query("SHOW INDEX FROM umpan_balik WHERE Key_name = 'uq_feedback_pengaduan'")->fetchAll();
             if (!empty($uq)) {
+                // SQL: Indeks unik lama dilepas agar skema yang diharapkan dapat menampung feedback dari jenis pemberi yang berbeda. Efek perubahan skema dipertahankan apa adanya sesuai kode project.
                 $db->exec('ALTER TABLE umpan_balik DROP INDEX uq_feedback_pengaduan');
             }
         }
 
+        // Data session digunakan untuk menjaga konteks login/pengguna antarrekuest HTTP.
         $_SESSION['schema_feedback_ok'] = true;
+    // Tangani kegagalan agar proses berhenti dengan pesan yang sesuai; bila perubahan database sudah berada dalam transaksi, controller dapat melakukan rollback.
     } catch (Exception $e) {
         exit('Struktur database belum sesuai. Import database/pengaduan_sekolah.sql atau jalankan database/migrasi_umpan_balik_admin.sql, lalu muat ulang halaman. Detail: ' . $e->getMessage());
     }
 }
+
+/**
+ * Mengubah nilai tanggal database menjadi tampilan tanggal berbahasa Indonesia.
+ * @param string|null $tanggal Nilai tanggal/waktu dari database.
+ * @return string Tanggal yang sudah diformat atau tanda `-` bila nilainya kosong.
+ * Alasan desain: strtotime digunakan untuk membaca tanggal database dan daftar nama bulan lokal menghindari ketergantungan pada locale sistem. Nilai yang tidak dapat diparse dikembalikan lewat e() agar tetap aman saat ditampilkan.
+ */
 
 function formatTanggal($tanggal) {
     if (!$tanggal) return '-';
@@ -68,6 +132,13 @@ function formatTanggal($tanggal) {
     $bulan = [1=>'Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
     return date('d', $ts) . ' ' . $bulan[(int) date('n', $ts)] . ' ' . date('Y, H:i', $ts);
 }
+
+/**
+ * Menghasilkan ikon SVG dari daftar ikon yang diizinkan aplikasi.
+ * @param string $name Kunci nama ikon, misalnya `home` atau `report`.
+ * @return string Markup SVG atau string kosong jika nama ikon tidak terdaftar.
+ * Alasan desain: Pemetaan allowlist mencegah input nama ikon menyisipkan markup SVG sembarang; pemanggil hanya bisa memilih path yang sudah didefinisikan.
+ */
 
 function uiIcon($name) {
     $paths = [
@@ -95,10 +166,18 @@ function uiIcon($name) {
         'refresh' => '<path d="M20 11a8 8 0 0 0-14-4L3 10M4 4v6h6M4 13a8 8 0 0 0 14 4l3-3M20 20v-6h-6"/>',
     ];
 
+    // Ikon hanya boleh berasal dari daftar yang ditentukan; nama tak dikenal tidak menghasilkan SVG dari input pengguna.
     if (!isset($paths[$name])) return '';
 
     return '<svg class="icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $paths[$name] . '</svg>';
 }
+
+/**
+ * Membuat label status dengan kelas CSS yang sesuai.
+ * @param string $status Status pengaduan yang akan ditampilkan.
+ * @return string Markup span badge yang berisi status.
+ * Alasan desain: Pemetaan status membuat warna konsisten. e() tetap digunakan pada kelas dan teks status karena keduanya ikut disisipkan ke HTML; status tidak dianggap aman hanya karena berasal dari database.
+ */
 
 function statusBadge($status) {
     $map = [
@@ -108,37 +187,72 @@ function statusBadge($status) {
         'Ditolak' => 'badge-danger',
     ];
 
+    // Status tak dikenal tetap diberi kelas netral, bukan membuat class CSS berdasarkan teks input bebas.
     $class = isset($map[$status]) ? $map[$status] : 'badge-muted';
     return '<span class="badge ' . e($class) . '" role="status"><span class="badge-dot" aria-hidden="true"></span>' . e($status) . '</span>';
 }
 
+/**
+ * Menyimpan atau mengambil notifikasi singkat antarpindah halaman.
+ * @param string|null $type Jenis notifikasi saat menyimpan, misalnya success/danger; null berarti mengambil.
+ * @param string|null $message Isi pesan notifikasi ketika mode simpan.
+ * @return array|null Data flash berisi type/message atau null jika tidak ada.
+ * Alasan desain: Session dipakai karena redirect membuat request HTTP baru. Saat dibaca, pesan langsung dihapus agar hanya tampil satu kali dan tidak terus berulang ketika halaman dimuat ulang.
+ */
+
 function flash($type = null, $message = null)
 {
     if ($type !== null) {
+        // Flash disimpan di session karena redirect menghasilkan request baru; data ini bersifat sementara dan ditampilkan satu kali.
         $_SESSION['flash'] = ['type' => $type, 'message' => $message];
         return;
     }
 
+    // Flash disimpan di session karena redirect menghasilkan request baru; data ini bersifat sementara dan ditampilkan satu kali.
     if (!isset($_SESSION['flash'])) return null;
 
+    // Flash disimpan di session karena redirect menghasilkan request baru; data ini bersifat sementara dan ditampilkan satu kali.
     $data = $_SESSION['flash'];
+    // Flash disimpan di session karena redirect menghasilkan request baru; data ini bersifat sementara dan ditampilkan satu kali.
     unset($_SESSION['flash']);
     return $data;
 }
 
+/**
+ * Menjaga route agar hanya diakses sesi login dan role yang diizinkan.
+ * @param string|null $role Role yang diperlukan, misalnya admin atau siswa; null hanya memerlukan login.
+ * @return void Tidak mengembalikan nilai; pengguna yang tidak memenuhi syarat diarahkan ke halaman lain.
+ * Alasan desain: Pemeriksaan dilakukan di server, bukan hanya menyembunyikan menu di browser, karena URL dapat diketik langsung. Pemeriksaan role mencegah akun login biasa menjalankan aksi khusus admin.
+ */
+
 function requireLogin($role = null) {
+    // Session menyimpan ID akun yang telah terautentikasi untuk mengenali pengguna pada request berikutnya.
     if (!isset($_SESSION['id_user'])) {
+        // Pesan flash disimpan di session agar tetap tersedia setelah redirect, lalu ditampilkan sekali oleh layout/header.php.
         flash('danger', 'Silakan login terlebih dahulu.');
+        // Alihkan pengguna ke route yang sesuai setelah kondisi ditangani; helper redirect juga memanggil exit agar proses tidak berlanjut.
         redirect('login');
     }
 
+    // Role disimpan pada session agar controller/layout dapat menerapkan akses dan navigasi yang sesuai.
     if ($role !== null && (isset($_SESSION['role']) ? $_SESSION['role'] : '') !== $role) {
+        // Pesan flash disimpan di session agar tetap tersedia setelah redirect, lalu ditampilkan sekali oleh layout/header.php.
         flash('danger', 'Anda tidak memiliki akses ke halaman tersebut.');
+        // Alihkan pengguna ke route yang sesuai setelah kondisi ditangani; helper redirect juga memanggil exit agar proses tidak berlanjut.
         redirect('dashboard');
     }
 }
 
+/**
+ * Memuat file template dan menyediakan variabel data untuk template tersebut.
+ * @param string $file Nama view relatif di dalam folder views tanpa ekstensi `.php`.
+ * @param array $data Data yang diekstrak menjadi variabel lokal template; default array kosong.
+ * @return void Mengeluarkan HTML dari file view yang dipanggil.
+ * Alasan desain: extract membuat elemen data dapat dipakai sebagai variabel sederhana dalam template, sedangkan __DIR__ membuat path relatif tidak bergantung pada working directory saat PHP dijalankan. Nama view perlu berasal dari kode tepercaya, bukan input route mentah.
+ */
+
 function view($file, $data = []) {
+    // Array data diubah menjadi variabel lokal agar nama field bisa dibaca template. Karena extract membuat variabel, nama view dan key data harus berasal dari alur kode tepercaya.
     extract($data);
     require __DIR__ . '/views/' . $file . '.php';
 }

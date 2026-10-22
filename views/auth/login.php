@@ -1,4 +1,15 @@
 <?php
+
+/**
+ * FILE: views/auth/login.php
+ * FUNGSI: Template halaman login SIPAS.
+ * ALUR KERJA: Menampilkan form username/password, pesan validasi, dan tautan menuju registrasi. Pemeriksaan autentikasi sebenarnya tetap dilakukan server oleh AuthController.
+ * INPUT / OUTPUT: Input: `$error`. Output: HTML form POST ke route proses-login.
+ * FILE/TABEL TERKAIT: controllers/AuthController.php, views/layout/*.php, helpers.php, assets/app.js
+ * KEAMANAN OUTPUT: Teks dinamis di konteks HTML menggunakan e() untuk meng-escape karakter khusus dan membantu mencegah XSS; ID yang ditampilkan sebagai angka dikonversi ke integer.
+ * CATATAN FORM: `required` adalah bantuan browser; validasi autentikasi sebenarnya dilakukan AuthController di server.
+ * CATATAN PEMBELAJARAN: komentar ini menjelaskan kode yang ada; perilaku program sengaja dipertahankan.
+ */
 $title = 'Login - SIPAS';
 require __DIR__ . '/../layout/header.php';
 ?>
@@ -20,7 +31,7 @@ require __DIR__ . '/../layout/header.php';
         <h1>Selamat Datang</h1>
         <div class="sub">Masuk menggunakan akun yang sudah terdaftar.</div>
 
-        <?php if (!empty($error)): ?>
+        <?php /* required memberi umpan balik cepat di browser, tetapi AuthController tetap mengulang validasi di server karena POST dapat dibuat tanpa form ini. */ if (!empty($error)): ?>
             <div class="alert alert-error" role="alert">
                 <span class="alert-icon"><?= uiIcon('alert') ?></span>
                 <div class="alert-content"><?= e($error) ?></div>
