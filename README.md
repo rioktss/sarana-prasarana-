@@ -1,10 +1,15 @@
-akun admin
-username:admin
-pass:admin123
+# SIPAS - Sistem Pengaduan Sekolah
+> Dibuat oleh **Rio Okta Kusuma - 12 RPL 4**
 
-akun siswa
-username:siswa
-pass:siswa123
+Aplikasi pengaduan siswa berbasis web untuk memudahkan pelaporan masalah di sekolah.
 
-ini adalah aplikasi sipas (sistem pengaduan sekolah) dibuat oleh rio okta kusuma 12 RPL 4
+---
 
+##  Akun Login
+
+| Role | Username | Password |
+| :--- | :--- | :--- |
+|  ADMIN | `admin` | `admin123` |
+|  SISWA | `siswa` | `siswa123` |
+
+---
