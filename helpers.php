@@ -36,6 +36,39 @@ function e($value) {
 }
 
 /**
+ * Menghasilkan token CSRF untuk melindungi form yang mengubah data.
+ * Token disimpan di session dan dipakai kembali selama session aktif.
+ */
+function csrfToken() {
+    if (empty($_SESSION['_csrf_token']) || !is_string($_SESSION['_csrf_token'])) {
+        $_SESSION['_csrf_token'] = bin2hex(random_bytes(32));
+    }
+
+    return $_SESSION['_csrf_token'];
+}
+
+/**
+ * Menghasilkan input tersembunyi berisi token CSRF yang aman untuk HTML.
+ */
+function csrfField() {
+    return '<input type="hidden" name="_csrf_token" value="' . e(csrfToken()) . '">';
+}
+
+/**
+ * Memeriksa token CSRF pada request POST.
+ */
+function verifyCsrfToken() {
+    $submitted = isset($_POST['_csrf_token']) ? $_POST['_csrf_token'] : '';
+    $stored = isset($_SESSION['_csrf_token']) ? $_SESSION['_csrf_token'] : '';
+
+    return is_string($submitted)
+        && is_string($stored)
+        && $submitted !== ''
+        && $stored !== ''
+        && hash_equals($stored, $submitted);
+}
+
+/**
  * Menghitung panjang teks dengan memperhatikan karakter UTF-8.
  * @param string $text Teks yang akan dihitung.
  * @return int Jumlah karakter, bukan semata jumlah byte, jika dukungan yang tersedia memungkinkan.

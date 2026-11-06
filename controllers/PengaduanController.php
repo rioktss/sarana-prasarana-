@@ -91,50 +91,107 @@ class PengaduanController
      */
 
     public function updateStatus() {
-        // Guard server-side: pastikan hanya admin yang dapat menjalankan action ini; menyembunyikan menu saja tidak cukup karena URL bisa dipanggil langsung.
         requireLogin('admin');
-        // Ambil nilai form hanya jika key tersedia agar akses input kosong tidak memunculkan undefined index; validasi berikutnya tetap dilakukan di server.
-        $id = (int) ((isset($_POST['id_pengaduan']) ? $_POST['id_pengaduan'] : 0));
-        // Ambil nilai form hanya jika key tersedia agar akses input kosong tidak memunculkan undefined index; validasi berikutnya tetap dilakukan di server.
-        $status = (isset($_POST['status']) ? $_POST['status'] : '');
-        // Ambil nilai form hanya jika key tersedia agar akses input kosong tidak memunculkan undefined index; validasi berikutnya tetap dilakukan di server.
-        $keterangan = trim((isset($_POST['keterangan']) ? $_POST['keterangan'] : ''));
-        $allowed = ['Diajukan','Diproses','Selesai','Ditolak'];
 
-        // Pencocokan strict (`true`) mencegah perbedaan tipe dianggap sama; whitelist membatasi input ke opsi yang diketahui aplikasi.
-        if ($id <= 0 || !in_array($status, $allowed, true)) {
-            // Pesan flash disimpan di session agar tetap tersedia setelah redirect, lalu ditampilkan sekali oleh layout/header.php.
-            flash('danger', 'Data status tidak valid.');
-            // Alihkan pengguna ke route yang sesuai setelah kondisi ditangani; helper redirect juga memanggil exit agar proses tidak berlanjut.
+        $id = (int) (isset($_POST['id_pengaduan']) ? $_POST['id_pengaduan'] : 0);
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || $id <= 0) {
+            flash('danger', 'Permintaan pembaruan tidak valid.');
             redirect('admin-pengaduan');
         }
 
-        if (!$this->pengaduan->findById($id)) {
-            // Pesan flash disimpan di session agar tetap tersedia setelah redirect, lalu ditampilkan sekali oleh layout/header.php.
+        if (!verifyCsrfToken()) {
+            flash('danger', 'Sesi formulir tidak valid atau sudah kedaluwarsa. Muat ulang halaman lalu coba kembali.');
+            redirect('admin-detail', ['id' => $id]);
+        }
+
+        $data = $this->pengaduan->findById($id);
+        if (!$data) {
             flash('danger', 'Pengaduan tidak ditemukan.');
-            // Alihkan pengguna ke route yang sesuai setelah kondisi ditangani; helper redirect juga memanggil exit agar proses tidak berlanjut.
             redirect('admin-pengaduan');
+        }
+
+        $statusDiminta = trim((string) (isset($_POST['status']) ? $_POST['status'] : ''));
+        $keterangan = trim((string) (isset($_POST['keterangan']) ? $_POST['keterangan'] : ''));
+        $isiFeedback = trim((string) (isset($_POST['isi_feedback']) ? $_POST['isi_feedback'] : ''));
+        $allowed = ['Diajukan', 'Diproses', 'Selesai', 'Ditolak'];
+
+        if (textLength($keterangan) > 2000) {
+            flash('danger', 'Keterangan progres maksimal 2000 karakter.');
+            redirect('admin-detail', ['id' => $id]);
+        }
+
+        if (textLength($isiFeedback) > 2000) {
+            flash('danger', 'Umpan balik maksimal 2000 karakter.');
+            redirect('admin-detail', ['id' => $id]);
         }
 
         try {
-            // Mulai transaksi agar beberapa query yang saling bergantung bisa dianggap satu operasi; jika ada yang gagal, semuanya bisa di-rollback.
             $this->db->beginTransaction();
-            $this->pengaduan->updateStatus($id, $status);
-            // Status saat ini dan jejak riwayat disimpan bersama sehingga halaman detail menampilkan status yang sama dengan progres terakhir.
-            $this->progres->create($id, $status, $keterangan !== '' ? $keterangan : null);
-            // Commit memastikan seluruh perubahan dalam transaksi disimpan setelah semua langkah berhasil.
+
+            // Baca status terbaru sambil mengunci baris agar status final tidak bisa dilewati oleh request yang terlambat.
+            $statusSaatIni = $this->pengaduan->getStatusForUpdate($id);
+            if ($statusSaatIni === null) {
+                throw new RuntimeException('Pengaduan tidak ditemukan.');
+            }
+
+            $sudahSelesai = $statusSaatIni === 'Selesai';
+            if (!$sudahSelesai && !in_array($statusDiminta, $allowed, true)) {
+                throw new RuntimeException('Status pengaduan tidak valid.');
+            }
+
+            // Setelah Selesai, status dan progres dikunci di server. Admin tetap boleh mengirim umpan balik.
+            $statusBaru = $sudahSelesai ? $statusSaatIni : $statusDiminta;
+            $statusBerubah = !$sudahSelesai && $statusBaru !== $statusSaatIni;
+            $buatProgres = !$sudahSelesai && ($statusBerubah || $keterangan !== '');
+            $buatFeedback = $isiFeedback !== '';
+
+            if (!$buatProgres && !$buatFeedback) {
+                $this->db->rollBack();
+                flash('info', 'Tidak ada perubahan atau umpan balik baru untuk disimpan.');
+                redirect('admin-detail', ['id' => $id]);
+            }
+
+            if ($statusBerubah) {
+                $this->pengaduan->updateStatus($id, $statusBaru);
+            }
+
+            // Catat progres hanya jika status berubah atau admin menambahkan catatan baru.
+            // Ini mencegah baris progres Selesai duplikat ketika admin hanya mengirim feedback.
+            if ($buatProgres) {
+                $this->progres->create(
+                    $id,
+                    $statusBaru,
+                    $keterangan !== '' ? $keterangan : null
+                );
+            }
+
+            if ($buatFeedback) {
+                $this->feedback->create($id, $isiFeedback, 'admin');
+            }
+
             $this->db->commit();
-            // Pesan flash disimpan di session agar tetap tersedia setelah redirect, lalu ditampilkan sekali oleh layout/header.php.
-            flash('success', 'Status pengaduan berhasil diperbarui.');
-        // Tangani kegagalan agar proses berhenti dengan pesan yang sesuai; bila perubahan database sudah berada dalam transaksi, controller dapat melakukan rollback.
+
+            $pesan = [];
+            if ($statusBerubah) {
+                $pesan[] = 'Status pengaduan berhasil diperbarui';
+            } elseif ($buatProgres) {
+                $pesan[] = 'Catatan progres berhasil ditambahkan';
+            }
+            if ($buatFeedback) {
+                $pesan[] = 'umpan balik berhasil dikirim ke siswa';
+            }
+            if ($sudahSelesai && $buatFeedback) {
+                $pesan[] = 'status Selesai tetap terkunci';
+            }
+
+            flash('success', implode('. ', $pesan) . '.');
         } catch (Exception $e) {
-            // Rollback membatalkan perubahan yang belum di-commit agar database tidak tertinggal dalam keadaan setengah jadi.
-            if ($this->db->inTransaction()) $this->db->rollBack();
-            // Pesan flash disimpan di session agar tetap tersedia setelah redirect, lalu ditampilkan sekali oleh layout/header.php.
-            flash('danger', 'Gagal memperbarui status: ' . $e->getMessage());
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            flash('danger', 'Perubahan gagal disimpan: ' . $e->getMessage());
         }
 
-        // Alihkan pengguna ke route yang sesuai setelah kondisi ditangani; helper redirect juga memanggil exit agar proses tidak berlanjut.
         redirect('admin-detail', ['id' => $id]);
     }
 
@@ -256,10 +313,16 @@ class PengaduanController
      */
 
     public function saveFeedback() {
-        // Guard server-side: pastikan hanya siswa yang dapat menjalankan action ini; menyembunyikan menu saja tidak cukup karena URL bisa dipanggil langsung.
         requireLogin('siswa');
-        // Ambil nilai form hanya jika key tersedia agar akses input kosong tidak memunculkan undefined index; validasi berikutnya tetap dilakukan di server.
-        $id = (int) ((isset($_POST['id_pengaduan']) ? $_POST['id_pengaduan'] : 0));
+        $id = (int) (isset($_POST['id_pengaduan']) ? $_POST['id_pengaduan'] : 0);
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || $id <= 0) {
+            flash('danger', 'Permintaan feedback tidak valid.');
+            redirect('histori');
+        }
+        if (!verifyCsrfToken()) {
+            flash('danger', 'Sesi formulir tidak valid atau sudah kedaluwarsa. Muat ulang halaman lalu coba kembali.');
+            redirect('siswa-detail', ['id' => $id]);
+        }
         // Ambil nilai form hanya jika key tersedia agar akses input kosong tidak memunculkan undefined index; validasi berikutnya tetap dilakukan di server.
         $isi = trim((isset($_POST['isi_feedback']) ? $_POST['isi_feedback'] : ''));
         // Data dicari ulang di database; jangan hanya mengandalkan ID yang dikirim browser karena record bisa tidak ada atau bukan milik pengguna.
@@ -322,10 +385,16 @@ class PengaduanController
      */
 
     public function saveAdminFeedback() {
-        // Guard server-side: pastikan hanya admin yang dapat menjalankan action ini; menyembunyikan menu saja tidak cukup karena URL bisa dipanggil langsung.
         requireLogin('admin');
-        // Ambil nilai form hanya jika key tersedia agar akses input kosong tidak memunculkan undefined index; validasi berikutnya tetap dilakukan di server.
-        $id = (int) ((isset($_POST['id_pengaduan']) ? $_POST['id_pengaduan'] : 0));
+        $id = (int) (isset($_POST['id_pengaduan']) ? $_POST['id_pengaduan'] : 0);
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || $id <= 0) {
+            flash('danger', 'Permintaan umpan balik tidak valid.');
+            redirect('admin-pengaduan');
+        }
+        if (!verifyCsrfToken()) {
+            flash('danger', 'Sesi formulir tidak valid atau sudah kedaluwarsa. Muat ulang halaman lalu coba kembali.');
+            redirect('admin-detail', ['id' => $id]);
+        }
         // Ambil nilai form hanya jika key tersedia agar akses input kosong tidak memunculkan undefined index; validasi berikutnya tetap dilakukan di server.
         $isi = trim((isset($_POST['isi_feedback']) ? $_POST['isi_feedback'] : ''));
         // ID dikonversi ke integer dan diperiksa batasnya agar nilai kosong/tidak masuk akal tidak dipakai sebagai target query.

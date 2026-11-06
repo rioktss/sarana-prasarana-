@@ -1,432 +1,201 @@
-<<<<<<< HEAD
-
-=======
->>>>>>> a65b9f04304926e78198d8b0f8323880ff3e31bc
 <?php
-
 /**
  * FILE: views/admin/detail.php
- * FUNGSI: Template detail pengaduan untuk admin.
-<<<<<<< HEAD
- * FITUR:
- * - Menampilkan identitas laporan dan riwayat progres.
- * - Update status dan umpan balik menggunakan satu formulir.
- * - Satu tombol Simpan Perubahan untuk mengirim data.
- * - Status terkunci di tampilan ketika pengaduan sudah Selesai.
+ * FUNGSI: Menampilkan detail laporan, progres, dan panel pembaruan untuk admin.
+ * ALUR: Satu form menyimpan perubahan status/catatan dan umpan balik admin.
  */
-
 $title = 'Detail Pengaduan - SIPAS';
 $menu = 'pengaduan';
 
-$lastProgressIndex = !empty($progres) ? count($progres) - 1 : -1;
-$isSelesai = isset($pengaduan['status'])
-    && $pengaduan['status'] === 'Selesai';
+$progres = isset($progres) && is_array($progres) ? $progres : [];
+$feedbacks = isset($feedbacks) && is_array($feedbacks) ? $feedbacks : [];
+$lastProgressIndex = count($progres) - 1;
+$statusSaatIni = isset($pengaduan['status']) ? $pengaduan['status'] : '';
+$isSelesai = $statusSaatIni === 'Selesai';
+$idPengaduan = (int) $pengaduan['id_pengaduan'];
 
 require __DIR__ . '/../layout/header.php';
 ?>
 
-<a class="link page-back" href="index.php?page=admin-pengaduan">
-    <?= uiIcon('arrow-left') ?>
-    <span>Kembali ke pengaduan</span>
-</a>
+<div class="detail-page">
+    <a class="link page-back" href="index.php?page=admin-pengaduan">
+        <?= uiIcon('arrow-left') ?>
+        <span>Kembali ke pengaduan</span>
+    </a>
 
-<div class="detail-grid">
-
-    <!-- KOLOM DETAIL PENGADUAN -->
-    <div>
-        <div class="card">
-            <div class="card-body">
-
-                <div class="detail-topline">
-                    <?= statusBadge($pengaduan['status']) ?>
-
-                    <span class="small muted">
-                        #<?= (int) $pengaduan['id_pengaduan'] ?>
-                        ·
-                        <?= e(formatTanggal($pengaduan['tanggal_pengaduan'])) ?>
-                    </span>
-                </div>
-
-                <h2 class="detail-title">
-                    <?= e($pengaduan['judul_pengaduan']) ?>
-                </h2>
-
-                <p class="detail-description">
-                    <?= e($pengaduan['isi_pengaduan']) ?>
-                </p>
-
-                <div class="detail-item detail-reporter">
-                    <label>Pelapor</label>
-
-                    <strong>
-                        <?= e($pengaduan['nama_siswa']) ?>
-                    </strong>
-
-                    <div class="small muted">
-                        <?= e($pengaduan['kelas']) ?>
-                        · NIS <?= e($pengaduan['nis']) ?>
-                    </div>
-                </div>
-
-            </div>
+    <div class="detail-page-heading">
+        <div>
+            <div class="detail-eyebrow">PENGELOLAAN LAPORAN</div>
+            <h1>Detail Pengaduan</h1>
+            <p>Periksa laporan, pantau progres, dan kirim pembaruan kepada siswa.</p>
         </div>
-
-        <!-- RIWAYAT PROGRES -->
-        <div class="card card-space-top">
-            <div class="card-body">
-
-                <div class="section-title">
-                    <h3>Riwayat Progres</h3>
-
-                    <span class="small muted">
-                        <?= count($progres) ?> pembaruan
-                    </span>
-                </div>
-
-                <?php if (empty($progres)): ?>
-
-                    <div class="empty">
-                        Belum ada progres.
-                    </div>
-
-                <?php else: ?>
-
-                    <div
-                        class="timeline"
-                        aria-label="Riwayat progres pengaduan"
-                    >
-                        <?php foreach ($progres as $index => $item): ?>
-
-                            <div class="timeline-item
-                                <?= $index === $lastProgressIndex
-                                    ? 'is-current'
-                                    : 'is-complete' ?>
-                                <?= $item['status_progres'] === 'Ditolak'
-                                    ? 'is-rejected'
-                                    : '' ?>">
-
-                                <span
-                                    class="timeline-dot"
-                                    aria-hidden="true"
-                                ></span>
-
-                                <h4>
-                                    <?= e($item['status_progres']) ?>
-
-                                    <?= $index === $lastProgressIndex
-                                        ? ' · Terakhir'
-                                        : '' ?>
-                                </h4>
-
-                                <?php if (!empty($item['keterangan'])): ?>
-                                    <div class="small muted timeline-note">
-                                        <?= e($item['keterangan']) ?>
-                                    </div>
-                                <?php endif; ?>
-
-                                <small>
-                                    <?= e(formatTanggal(
-                                        $item['tanggal_progres']
-                                    )) ?>
-                                </small>
-
-                            </div>
-
-                        <?php endforeach; ?>
-                    </div>
-
-                <?php endif; ?>
-
-=======
- * ALUR KERJA: Menampilkan identitas laporan, riwayat progres, formulir update status, dan daftar/form umpan balik admin.
- * INPUT / OUTPUT: Input: `$pengaduan`, `$progres`, `$feedbacks`. Output: HTML detail dan form POST untuk update status/feedback.
- * FILE/TABEL TERKAIT: controllers/PengaduanController.php, models/PengaduanModel.php, models/ProgresModel.php, models/FeedbackModel.php, views/layout/*.php
- * KEAMANAN OUTPUT: Teks dinamis di konteks HTML menggunakan e() untuk meng-escape karakter khusus dan membantu mencegah XSS; ID yang ditampilkan sebagai angka dikonversi ke integer.
- * CATATAN FORM: Status yang muncul pada select bukan batas keamanan; controller memakai whitelist status saat POST diterima.
- * CATATAN PEMBELAJARAN: komentar ini menjelaskan kode yang ada; perilaku program sengaja dipertahankan.
- */
-$title='Detail Pengaduan - SIPAS';
-$menu='pengaduan';
-$lastProgressIndex = !empty($progres) ? count($progres) - 1 : -1;
-require __DIR__ . '/../layout/header.php';
-?>
-<a class="link page-back" href="index.php?page=admin-pengaduan"><?= uiIcon('arrow-left') ?><span>Kembali ke pengaduan</span></a>
-
-<div class="detail-grid">
-    <div>
-        <div class="card">
-            <div class="card-body">
-                <div class="detail-topline">
-                    <?= statusBadge($pengaduan['status']) ?>
-                    <span class="small muted">#<?= (int)$pengaduan['id_pengaduan'] ?> · <?= e(formatTanggal($pengaduan['tanggal_pengaduan'])) ?></span>
-                </div>
-                <h2 class="detail-title"><?= e($pengaduan['judul_pengaduan']) ?></h2>
-                <p class="detail-description"><?= /* Isi laporan berasal dari pengguna; e() membantu mencegah teks HTML/script diperlakukan sebagai markup aktif. */ e($pengaduan['isi_pengaduan']) ?></p>
-                <div class="detail-item detail-reporter">
-                    <label>Pelapor</label>
-                    <strong><?= e($pengaduan['nama_siswa']) ?></strong>
-                    <div class="small muted"><?= e($pengaduan['kelas']) ?> · NIS <?= e($pengaduan['nis']) ?></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card card-space-top">
-            <div class="card-body">
-                <div class="section-title"><h3>Riwayat Progres</h3><span class="small muted"><?= count($progres) ?> pembaruan</span></div>
-                <?php if(empty($progres)): ?>
-                    <div class="empty">Belum ada progres.</div>
-                <?php else: ?>
-                    <div class="timeline" aria-label="Riwayat progres pengaduan">
-                        <?php foreach($progres as $index => $item): ?>
-                            <div class="timeline-item <?= $index === $lastProgressIndex ? 'is-current' : 'is-complete' ?> <?= $item['status_progres'] === 'Ditolak' ? 'is-rejected' : '' ?>">
-                                <span class="timeline-dot" aria-hidden="true"></span>
-                                <h4><?= e($item['status_progres']) ?><?= $index === $lastProgressIndex ? ' · Terakhir' : '' ?></h4>
-                                <?php if($item['keterangan']): ?><div class="small muted timeline-note"><?= e($item['keterangan']) ?></div><?php endif; ?>
-                                <small><?= e(formatTanggal($item['tanggal_progres'])) ?></small>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
->>>>>>> a65b9f04304926e78198d8b0f8323880ff3e31bc
-            </div>
+        <div class="detail-heading-status">
+            <?= statusBadge($statusSaatIni) ?>
+            <span class="small muted">Laporan #<?= $idPengaduan ?></span>
         </div>
     </div>
 
-<<<<<<< HEAD
-    <!-- KOLOM PEMBARUAN DAN UMPAN BALIK -->
-    <div>
-        <div class="card">
-            <div class="card-body">
-
-                <div class="section-title">
-                    <h3>Perbarui Pengaduan</h3>
-
-                    <?= statusBadge($pengaduan['status']) ?>
-                </div>
-
-                <?php if ($isSelesai): ?>
-                    <div class="helper">
-                        Pengaduan ini sudah selesai. Status tidak dapat
-                        diubah kembali, tetapi admin masih dapat memberikan
-                        umpan balik.
-                    </div>
-                <?php endif; ?>
-
-                <!--
-                    STATUS DAN FEEDBACK DIKIRIM DALAM SATU POST.
-                    Controller update-status harus memproses kedua data ini.
-                -->
-                <form
-                    method="post"
-                    action="index.php?page=update-status"
-                    data-loading
-                >
-
-                    <input
-                        type="hidden"
-                        name="id_pengaduan"
-                        value="<?= (int) $pengaduan['id_pengaduan'] ?>"
-                    >
-
-                    <!-- UPDATE STATUS -->
-                    <div class="form-group">
-                        <label
-                            class="label <?= !$isSelesai ? 'required' : '' ?>"
-                            for="status_pengaduan"
-                        >
-                            Status Pengaduan
-                        </label>
-
-                        <select
-                            class="select"
-                            id="status_pengaduan"
-                            name="status"
-                            <?= $isSelesai ? 'disabled' : 'required' ?>
-                        >
-                            <?php
-                            foreach (
-                                ['Diajukan', 'Diproses', 'Selesai', 'Ditolak']
-                                as $st
-                            ):
-                            ?>
-                                <option
-                                    value="<?= e($st) ?>"
-                                    <?= $pengaduan['status'] === $st
-                                        ? 'selected'
-                                        : '' ?>
-                                >
-                                    <?= e($st) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-
-                        <?php if ($isSelesai): ?>
-                            <div class="helper">
-                                Status dikunci karena laporan telah selesai.
-                            </div>
-                        <?php endif; ?>
+    <div class="detail-grid detail-grid-admin">
+        <div class="detail-stack">
+            <section class="card">
+                <div class="card-body">
+                    <div class="detail-panel-heading">
+                        <div>
+                            <span class="detail-eyebrow">INFORMASI LAPORAN</span>
+                            <h2 class="detail-title"><?= e($pengaduan['judul_pengaduan']) ?></h2>
+                        </div>
+                        <span class="small muted detail-date"><?= e(formatTanggal($pengaduan['tanggal_pengaduan'])) ?></span>
                     </div>
 
-                    <!-- KETERANGAN PROGRES -->
-                    <div class="form-group">
-                        <label
-                            class="label"
-                            for="keterangan"
-                        >
-                            Keterangan Progres
-                        </label>
+                    <div class="detail-description detail-report-content"><?= e($pengaduan['isi_pengaduan']) ?></div>
 
-                        <textarea
-                            class="textarea"
-                            id="keterangan"
-                            name="keterangan"
-                            placeholder="Contoh: Sudah dilaporkan ke bagian sarpras."
-                        ></textarea>
-
-                        <div class="helper">
-                            Tambahkan catatan untuk menjelaskan perubahan
-                            status pengaduan.
+                    <div class="detail-reporter-card">
+                        <div class="detail-reporter-avatar" aria-hidden="true"><?= e(strtoupper(substr((string) $pengaduan['nama_siswa'], 0, 1))) ?></div>
+                        <div class="detail-reporter-copy">
+                            <span class="small muted">Dilaporkan oleh</span>
+                            <strong><?= e($pengaduan['nama_siswa']) ?></strong>
+                            <span class="small muted"><?= e($pengaduan['kelas']) ?> <span aria-hidden="true">·</span> NIS <?= e($pengaduan['nis']) ?></span>
                         </div>
                     </div>
+                </div>
+            </section>
 
-                    <!-- RIWAYAT UMPAN BALIK DI FORM YANG SAMA -->
-                    <div class="form-group">
-                        <label class="label">
-                            Riwayat Umpan Balik
-                        </label>
+            <section class="card">
+                <div class="card-body">
+                    <div class="section-title detail-section-heading">
+                        <div>
+                            <span class="detail-eyebrow">PERJALANAN LAPORAN</span>
+                            <h3>Riwayat Progres</h3>
+                        </div>
+                        <span class="small muted"><?= count($progres) ?> pembaruan</span>
+                    </div>
 
-                        <?php if (empty($feedbacks)): ?>
+                    <?php if (empty($progres)): ?>
+                        <div class="detail-empty-state">Belum ada riwayat progres untuk laporan ini.</div>
+                    <?php else: ?>
+                        <div class="timeline" aria-label="Riwayat progres pengaduan">
+                            <?php foreach ($progres as $index => $item): ?>
+                                <?php
+                                $statusProgres = isset($item['status_progres']) ? $item['status_progres'] : '';
+                                $isLast = $index === $lastProgressIndex;
+                                $isRejected = $statusProgres === 'Ditolak';
+                                ?>
+                                <article class="timeline-item <?= $isLast ? 'is-current' : 'is-complete' ?> <?= $isRejected ? 'is-rejected' : '' ?>">
+                                    <span class="timeline-dot" aria-hidden="true"></span>
+                                    <div class="timeline-content">
+                                        <div class="timeline-heading-row">
+                                            <h4><?= e($statusProgres) ?></h4>
+                                            <?php if ($isLast): ?><span class="timeline-current-label">Terbaru</span><?php endif; ?>
+                                        </div>
+                                        <?php if (!empty($item['keterangan'])): ?>
+                                            <p class="small muted timeline-note"><?= e($item['keterangan']) ?></p>
+                                        <?php endif; ?>
+                                        <small><?= e(formatTanggal($item['tanggal_progres'])) ?></small>
+                                    </div>
+                                </article>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </section>
+        </div>
 
-                            <div class="empty">
-                                Belum ada umpan balik untuk pengaduan ini.
+        <div class="detail-stack">
+            <section class="card">
+                <div class="card-body">
+                    <div class="detail-section-heading detail-panel-heading">
+                        <div>
+                            <span class="detail-eyebrow">TINDAK LANJUT</span>
+                            <h3>Perbarui Pengaduan</h3>
+                        </div>
+                        <?= statusBadge($statusSaatIni) ?>
+                    </div>
+
+                    <?php if ($isSelesai): ?>
+                        <div class="detail-lock-notice">
+                            <span class="detail-notice-icon" aria-hidden="true"><?= uiIcon('lock') ?></span>
+                            <div>
+                                <strong>Pengaduan telah selesai</strong>
+                                <p>Status dan riwayat progres dikunci. Admin masih dapat mengirim umpan balik kepada siswa.</p>
                             </div>
+                        </div>
+                    <?php else: ?>
+                        <p class="detail-intro-copy">Ubah status sesuai perkembangan penanganan. Catatan progres akan masuk ke riwayat laporan.</p>
+                    <?php endif; ?>
 
-                        <?php else: ?>
+                    <form class="detail-form" method="post" action="index.php?page=update-status" data-loading>
+                        <?= csrfField() ?>
+                        <input type="hidden" name="id_pengaduan" value="<?= $idPengaduan ?>">
 
+                        <div class="form-group">
+                            <label class="label required" for="status_pengaduan">Status Pengaduan</label>
+                            <?php if ($isSelesai): ?>
+                                <input type="hidden" name="status" value="Selesai">
+                            <?php endif; ?>
+                            <select class="select" id="status_pengaduan" name="<?= $isSelesai ? '' : 'status' ?>" <?= $isSelesai ? 'disabled' : 'required' ?>>
+                                <?php foreach (['Diajukan', 'Diproses', 'Selesai', 'Ditolak'] as $status): ?>
+                                    <option value="<?= e($status) ?>" <?= $statusSaatIni === $status ? 'selected' : '' ?>><?= e($status) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <?php if ($isSelesai): ?><span class="helper">Status tidak dapat diubah kembali.</span><?php endif; ?>
+                        </div>
+
+                        <?php if (!$isSelesai): ?>
+                            <div class="form-group">
+                                <label class="label" for="keterangan">Catatan Progres <span class="label-optional">(opsional)</span></label>
+                                <textarea class="textarea detail-textarea" id="keterangan" name="keterangan" maxlength="2000" placeholder="Jelaskan perkembangan penanganan laporan..."></textarea>
+                                <span class="helper">Catatan akan ditampilkan pada riwayat progres yang dapat dilihat siswa.</span>
+                            </div>
+                        <?php endif; ?>
+
+                        <div class="form-group detail-feedback-input-group">
+                            <label class="label" for="isi_feedback_admin">Umpan Balik untuk Siswa <span class="label-optional">(opsional)</span></label>
+                            <textarea class="textarea detail-textarea" id="isi_feedback_admin" name="isi_feedback" maxlength="2000" placeholder="Tulis informasi atau tanggapan untuk siswa..."></textarea>
+                            <span class="helper">Kosongkan jika tidak ada umpan balik baru. Maksimal 2.000 karakter.</span>
+                        </div>
+
+                        <button class="btn btn-primary full-width detail-submit" type="submit" data-loading-label="Menyimpan...">
+                            <?= uiIcon('save') ?>
+                            <span>Simpan Perubahan</span>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-body">
+                    <div class="section-title detail-section-heading">
+                        <div>
+                            <span class="detail-eyebrow">KOMUNIKASI</span>
+                            <h3>Riwayat Umpan Balik</h3>
+                        </div>
+                        <span class="small muted"><?= count($feedbacks) ?> pesan</span>
+                    </div>
+
+                    <?php if (empty($feedbacks)): ?>
+                        <div class="detail-empty-state">Belum ada umpan balik pada pengaduan ini.</div>
+                    <?php else: ?>
+                        <div class="detail-feedback-list">
                             <?php foreach ($feedbacks as $fb): ?>
-
-                                <div class="feedback-box feedback-<?= e(
-                                    $fb['pemberi']
-                                ) ?>">
-
-                                    <div class="feedback-author">
-                                        <?= $fb['pemberi'] === 'admin'
-                                            ? 'Tanggapan Admin'
-                                            : 'Feedback Siswa' ?>
+                                <?php
+                                $pemberi = isset($fb['pemberi']) ? $fb['pemberi'] : '';
+                                $isAdminFeedback = $pemberi === 'admin';
+                                $feedbackLabel = $isAdminFeedback ? 'Tanggapan Admin' : ($pemberi === 'siswa' ? 'Feedback Siswa' : 'Umpan Balik');
+                                ?>
+                                <article class="feedback-box <?= $isAdminFeedback ? 'feedback-admin' : 'feedback-siswa' ?>">
+                                    <div class="feedback-card-heading">
+                                        <strong><?= e($feedbackLabel) ?></strong>
+                                        <span class="small muted"><?= e(formatTanggal($fb['tanggal_feedback'])) ?></span>
                                     </div>
-
-                                    <?= nl2br(e($fb['isi_feedback'])) ?>
-
-                                    <div class="small muted feedback-date">
-                                        Diberikan
-                                        <?= e(formatTanggal(
-                                            $fb['tanggal_feedback']
-                                        )) ?>
-                                    </div>
-
-                                </div>
-
+                                    <div class="feedback-message"><?= nl2br(e($fb['isi_feedback'])) ?></div>
+                                </article>
                             <?php endforeach; ?>
-
-                        <?php endif; ?>
-                    </div>
-
-                    <!-- ISI FEEDBACK ADMIN -->
-                    <div class="form-group">
-                        <label
-                            class="label"
-                            for="isi_feedback_admin"
-                        >
-                            Tambahkan Umpan Balik
-                        </label>
-
-                        <textarea
-                            class="textarea"
-                            id="isi_feedback_admin"
-                            name="isi_feedback"
-                            maxlength="2000"
-                            placeholder="Contoh: Laporan sudah kami terima dan akan diperbaiki minggu ini."
-                        ></textarea>
-
-                        <div class="helper">
-                            Kosongkan jika tidak ingin menambahkan umpan balik.
-                            Tanggapan yang dikirim akan tampil pada halaman
-                            detail pengaduan milik siswa.
                         </div>
-                    </div>
-
-                    <!-- SATU TOMBOL UNTUK SEMUA PERUBAHAN -->
-                    <button
-                        class="btn btn-primary full-width"
-                        type="submit"
-                        data-loading-label="Menyimpan..."
-                    >
-                        <?= uiIcon('save') ?>
-                        <span>Simpan Perubahan</span>
-                    </button>
-
-                </form>
-
-            </div>
-        </div>
-    </div>
-
-</div>
-
-=======
-    <div>
-        <div class="card">
-            <div class="card-body">
-                <div class="section-title"><h3>Update Status</h3><?= statusBadge($pengaduan['status']) ?></div>
-                <form method="post" action="index.php?page=update-status" data-loading>
-                    <input type="hidden" name="id_pengaduan" value="<?= (int)$pengaduan['id_pengaduan'] ?>">
-                    <div class="form-group">
-                        <label class="label required" for="status_pengaduan">Status Pengaduan</label>
-                        <select class="select" id="status_pengaduan" name="status" required>
-                            <?php /* Form menampilkan status dari daftar tetap; controller tetap memvalidasi whitelist yang sama di server. */ foreach(['Diajukan','Diproses','Selesai','Ditolak'] as $st): ?>
-                                <option value="<?= e($st) ?>" <?= $pengaduan['status']===$st?'selected':'' ?>><?= e($st) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="label" for="keterangan">Keterangan Progres</label>
-                        <textarea class="textarea" id="keterangan" name="keterangan" placeholder="Contoh: Sudah dilaporkan ke bagian sarpras."></textarea>
-                        <div class="helper">Tambahkan catatan singkat agar siswa memahami perubahan yang dibuat.</div>
-                    </div>
-                    <button class="btn btn-primary full-width" type="submit" data-loading-label="Menyimpan..."><?= uiIcon('save') ?><span>Simpan Perubahan</span></button>
-                </form>
-            </div>
-        </div>
-
-        <div class="card card-space-top">
-            <div class="card-body">
-                <h3 class="section-title-simple">Umpan Balik</h3>
-                <?php if(empty($feedbacks)): ?>
-                    <div class="empty">Belum ada umpan balik untuk pengaduan ini.</div>
-                <?php else: ?>
-                    <?php foreach($feedbacks as $fb): ?>
-                        <div class="feedback-box feedback-<?= e($fb['pemberi']) ?>">
-                            <div class="feedback-author"><?= $fb['pemberi'] === 'admin' ? 'Tanggapan Admin' : 'Feedback Siswa' ?></div>
-                            <?= nl2br(e($fb['isi_feedback'])) ?>
-                            <div class="small muted feedback-date">Diberikan <?= e(formatTanggal($fb['tanggal_feedback'])) ?></div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-
-                <form class="feedback-form" method="post" action="index.php?page=admin-feedback" data-loading>
-                    <input type="hidden" name="id_pengaduan" value="<?= (int)$pengaduan['id_pengaduan'] ?>">
-                    <div class="form-group">
-                        <label class="label required" for="isi_feedback_admin">Beri Umpan Balik</label>
-                        <textarea class="textarea" id="isi_feedback_admin" name="isi_feedback" maxlength="2000" placeholder="Contoh: Laporan sudah kami terima dan akan diperbaiki minggu ini." required></textarea>
-                        <div class="helper">Tanggapan ini akan tampil di halaman detail pengaduan milik siswa.</div>
-                    </div>
-                    <button class="btn btn-success full-width" type="submit" data-loading-label="Mengirim...">
-                        <?= uiIcon('send') ?><span>Kirim Umpan Balik</span>
-                    </button>
-                </form>
-            </div>
+                    <?php endif; ?>
+                </div>
+            </section>
         </div>
     </div>
 </div>
->>>>>>> a65b9f04304926e78198d8b0f8323880ff3e31bc
+
 <?php require __DIR__ . '/../layout/footer.php'; ?>

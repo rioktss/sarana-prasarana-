@@ -11,11 +11,7 @@
  */
 class Database
 {
-<<<<<<< HEAD
-    private $host = 'localhost';
-=======
-    private $host = '127.0.0.1';
->>>>>>> a65b9f04304926e78198d8b0f8323880ff3e31bc
+    private $host = '127.0.1.0';
     private $port = 3306;
     private $username = 'root';
 
@@ -27,11 +23,7 @@ class Database
     // Kredensial ini adalah fallback kompatibilitas untuk lingkungan lokal; jangan gunakan akun root/default pada server produksi.
     private $passwords = ['root', ''];
     // Nama database kandidat mengikuti beberapa versi/skema yang disediakan project; file lokal dapat memilih nama yang pasti.
-<<<<<<< HEAD
-    private $databases = ['sipasbaru', 'sipas_db'];
-=======
-    private $databases = ['sipas_db', ''];
->>>>>>> a65b9f04304926e78198d8b0f8323880ff3e31bc
+    private $databases = ['sipas_db1'];
 
     /**
      * Memuat pengaturan koneksi lokal opsional tanpa mengharuskan file lokal ada di setiap instalasi.

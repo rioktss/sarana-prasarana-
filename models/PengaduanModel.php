@@ -142,10 +142,22 @@ class PengaduanModel
      * Alasan desain: WHERE id_pengaduan membatasi perubahan pada satu laporan; parameter query memisahkan ID/status dari SQL. Validasi status berada di controller sebelum model dipanggil.
      */
 
+    /**
+     * Mengunci baris pengaduan dan membaca status terakhir di dalam transaksi.
+     * Penguncian mencegah dua request admin saling menimpa saat status diperbarui.
+     * @return string|null Status terkini atau null jika pengaduan tidak ditemukan.
+     */
+    public function getStatusForUpdate($id) {
+        $stmt = $this->db->prepare('SELECT status FROM pengaduan WHERE id_pengaduan = ? FOR UPDATE');
+        $stmt->execute([$id]);
+        $status = $stmt->fetchColumn();
+
+        return $status === false ? null : $status;
+    }
+
     public function updateStatus($id, $status) {
-        // SQL: Query UPDATE ini mengubah status laporan tertentu saja. WHERE id_pengaduan penting agar status laporan lain tidak ikut berubah; controller memastikan status termasuk daftar yang diizinkan.
-        $stmt = $this->db->prepare('UPDATE pengaduan SET status = ? WHERE id_pengaduan = ?');
-        // Nilai diserahkan sebagai parameter statement, bukan ditempel langsung ke string SQL.
+        // Proteksi tambahan di level query: laporan yang telah Selesai tidak dapat dibuka kembali.
+        $stmt = $this->db->prepare("UPDATE pengaduan SET status = ? WHERE id_pengaduan = ? AND status <> 'Selesai'");
         $stmt->execute([$status, $id]);
     }
 }
