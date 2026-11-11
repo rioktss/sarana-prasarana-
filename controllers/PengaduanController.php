@@ -32,6 +32,91 @@ class PengaduanController
     }
 
     /**
+     * Memvalidasi dan menyimpan satu foto bukti pengaduan.
+     * @return string|null Path relatif foto atau null jika siswa tidak melampirkan foto.
+     * Keamanan: ukuran, MIME, isi gambar, dan nama file diperiksa di server; nama asli dari pengguna tidak dipakai sebagai nama file.
+     */
+    private function uploadEvidencePhoto() {
+        if (!isset($_FILES['foto_bukti'])) return null;
+
+        $file = $_FILES['foto_bukti'];
+        if (!is_array($file) || !isset($file['error']) || is_array($file['error'])) {
+            throw new RuntimeException('Data foto bukti tidak valid.');
+        }
+
+        $uploadError = (int) $file['error'];
+        if ($uploadError === UPLOAD_ERR_NO_FILE) return null;
+        if ($uploadError !== UPLOAD_ERR_OK) {
+            if ($uploadError === UPLOAD_ERR_INI_SIZE || $uploadError === UPLOAD_ERR_FORM_SIZE) {
+                throw new RuntimeException('Ukuran foto terlalu besar. Maksimal 5 MB.');
+            }
+            throw new RuntimeException('Foto bukti gagal diunggah. Silakan pilih foto lain.');
+        }
+
+        $tmpName = isset($file['tmp_name']) ? $file['tmp_name'] : '';
+        if (!is_string($tmpName) || $tmpName === '' || !is_uploaded_file($tmpName)) {
+            throw new RuntimeException('Berkas foto tidak dikenali sebagai unggahan yang valid.');
+        }
+        $fileSize = @filesize($tmpName);
+        if ($fileSize === false || $fileSize <= 0 || $fileSize > 5 * 1024 * 1024) {
+            throw new RuntimeException('Ukuran foto harus lebih dari 0 byte dan maksimal 5 MB.');
+        }
+
+        $imageInfo = @getimagesize($tmpName);
+        if ($imageInfo === false || empty($imageInfo['mime'])) {
+            throw new RuntimeException('Berkas yang dipilih bukan gambar yang valid.');
+        }
+
+        $mime = $imageInfo['mime'];
+        if (function_exists('finfo_open')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            if ($finfo !== false) {
+                $detectedMime = finfo_file($finfo, $tmpName);
+                finfo_close($finfo);
+                if ($detectedMime !== $mime) {
+                    throw new RuntimeException('Tipe file foto tidak sesuai dengan isi gambar.');
+                }
+            }
+        }
+
+        $allowedTypes = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp'
+        ];
+        if (!isset($allowedTypes[$mime])) {
+            throw new RuntimeException('Format foto harus JPG, PNG, atau WEBP.');
+        }
+
+        $width = isset($imageInfo[0]) ? (int) $imageInfo[0] : 0;
+        $height = isset($imageInfo[1]) ? (int) $imageInfo[1] : 0;
+        if ($width <= 0 || $height <= 0 || $width > 10000 || $height > 10000 || ($width * $height) > 40000000) {
+            throw new RuntimeException('Resolusi foto terlalu besar atau tidak valid.');
+        }
+
+        $uploadDir = __DIR__ . '/../uploads/pengaduan';
+        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
+            throw new RuntimeException('Folder penyimpanan foto tidak dapat dibuat.');
+        }
+
+        $fileName = bin2hex(random_bytes(16)) . '.' . $allowedTypes[$mime];
+        $destination = $uploadDir . '/' . $fileName;
+        if (!move_uploaded_file($tmpName, $destination)) {
+            throw new RuntimeException('Foto bukti tidak dapat disimpan di server.');
+        }
+
+        return 'uploads/pengaduan/' . $fileName;
+    }
+
+    /** Menghapus foto yang baru diunggah ketika penyimpanan database gagal. */
+    private function deleteEvidencePhoto($relativePath) {
+        if (!is_string($relativePath) || strpos($relativePath, 'uploads/pengaduan/') !== 0) return;
+        $fileName = basename($relativePath);
+        $path = __DIR__ . '/../uploads/pengaduan/' . $fileName;
+        if (is_file($path)) @unlink($path);
+    }
+
+    /**
      * Menampilkan daftar pengaduan bagi admin, dengan filter status opsional.
      * @return void Mengirim list dan status filter ke view admin/pengaduan.
      * Alasan desain: requireLogin admin mencegah siswa membaca halaman pengelolaan. Daftar status allowlist memastikan filter yang diteruskan hanya status yang dikenali aplikasi.
@@ -58,6 +143,68 @@ class PengaduanController
      * @return void Menampilkan view admin/detail atau redirect jika ID/data tidak valid.
      * Alasan desain: ID dari URL dikonversi menjadi integer lalu diperiksa. Mengecek record dulu mencegah view mengakses indeks data yang tidak tersedia.
      */
+
+    /**
+     * Mengirim foto bukti hanya kepada admin atau siswa pemilik pengaduan.
+     * @return void Mengirim konten gambar atau respons 403/404.
+     * Alasan keamanan: folder unggahan tidak dibuka langsung oleh web server; akses foto melewati pemeriksaan session dan kepemilikan laporan.
+     */
+    public function showEvidence() {
+        $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
+        if ($role === 'admin') {
+            requireLogin('admin');
+        } elseif ($role === 'siswa') {
+            requireLogin('siswa');
+        } else {
+            http_response_code(403);
+            exit('Akses ditolak.');
+        }
+
+        $id = (int) (isset($_GET['id']) ? $_GET['id'] : 0);
+        if ($id <= 0) {
+            http_response_code(404);
+            exit('Foto tidak ditemukan.');
+        }
+
+        $data = $this->pengaduan->findById($id);
+        if (!$data) {
+            http_response_code(404);
+            exit('Foto tidak ditemukan.');
+        }
+        if ($role === 'siswa' && (int) $data['id_siswa'] !== (int) $_SESSION['id_siswa']) {
+            http_response_code(403);
+            exit('Anda tidak memiliki akses ke foto ini.');
+        }
+
+        $relativePath = isset($data['foto_bukti']) ? (string) $data['foto_bukti'] : '';
+        if (strpos($relativePath, 'uploads/pengaduan/') !== 0) {
+            http_response_code(404);
+            exit('Foto tidak ditemukan.');
+        }
+
+        $fileName = substr($relativePath, strlen('uploads/pengaduan/'));
+        if (!preg_match('/\A[a-f0-9]{32}\.(jpg|png|webp)\z/D', $fileName, $matches)) {
+            http_response_code(404);
+            exit('Foto tidak ditemukan.');
+        }
+
+        $uploadDir = realpath(__DIR__ . '/../uploads/pengaduan');
+        $filePath = $uploadDir !== false ? realpath($uploadDir . '/' . $fileName) : false;
+        if ($uploadDir === false || $filePath === false || strpos($filePath, $uploadDir . DIRECTORY_SEPARATOR) !== 0 || !is_file($filePath)) {
+            http_response_code(404);
+            exit('Foto tidak ditemukan.');
+        }
+
+        $mimeByExtension = ['jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'];
+        $extension = $matches[1];
+        header('Content-Type: ' . $mimeByExtension[$extension]);
+        header('Content-Length: ' . (string) filesize($filePath));
+        header('Content-Disposition: inline; filename="foto-bukti-' . $id . '.' . $extension . '"');
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: private, max-age=300');
+        readfile($filePath);
+        exit;
+    }
 
     public function adminDetail() {
         // Guard server-side: pastikan hanya admin yang dapat menjalankan action ini; menyembunyikan menu saja tidak cukup karena URL bisa dipanggil langsung.
@@ -217,6 +364,10 @@ class PengaduanController
     public function store() {
         // Guard server-side: pastikan hanya siswa yang dapat menjalankan action ini; menyembunyikan menu saja tidak cukup karena URL bisa dipanggil langsung.
         requireLogin('siswa');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verifyCsrfToken()) {
+            flash('danger', 'Sesi formulir tidak valid atau sudah kedaluwarsa. Muat ulang halaman lalu coba kembali.');
+            redirect('kirim-pengaduan');
+        }
         $old = [
             // Ambil nilai form hanya jika key tersedia agar akses input kosong tidak memunculkan undefined index; validasi berikutnya tetap dilakukan di server.
             'judul_pengaduan' => trim((isset($_POST['judul_pengaduan']) ? $_POST['judul_pengaduan'] : '')),
@@ -239,11 +390,14 @@ class PengaduanController
             return;
         }
 
+        $fotoBuktiTersimpan = null;
         try {
-            // Mulai transaksi agar beberapa query yang saling bergantung bisa dianggap satu operasi; jika ada yang gagal, semuanya bisa di-rollback.
+            // Foto divalidasi dan disimpan lebih dahulu; jika transaksi database gagal, file akan dihapus kembali.
+            $fotoBuktiTersimpan = $this->uploadEvidencePhoto();
+            // Mulai transaksi agar insert pengaduan dan progres awal tersimpan sebagai satu kesatuan.
             $this->db->beginTransaction();
-            // ID siswa diambil dari session, bukan dipercaya dari form/URL, sehingga operasi dapat dibatasi pada pemilik akun aktif.
-            $id = $this->pengaduan->create((int) $_SESSION['id_siswa'], $old['judul_pengaduan'], $old['isi_pengaduan']);
+            // ID siswa diambil dari session, bukan dipercaya dari form/URL.
+            $id = $this->pengaduan->create((int) $_SESSION['id_siswa'], $old['judul_pengaduan'], $old['isi_pengaduan'], $fotoBuktiTersimpan);
             // Catatan awal membuat timeline tidak kosong begitu pengaduan berhasil dibuat.
             $this->progres->create($id, 'Diajukan', 'Pengaduan telah diterima sistem dan menunggu ditindaklanjuti.');
             // Commit memastikan seluruh perubahan dalam transaksi disimpan setelah semua langkah berhasil.
@@ -256,6 +410,7 @@ class PengaduanController
         } catch (Exception $e) {
             // Rollback membatalkan perubahan yang belum di-commit agar database tidak tertinggal dalam keadaan setengah jadi.
             if ($this->db->inTransaction()) $this->db->rollBack();
+            if ($fotoBuktiTersimpan !== null) $this->deleteEvidencePhoto($fotoBuktiTersimpan);
             // Controller meneruskan data yang sudah diolah ke view; template bertugas menampilkan, bukan menjalankan query database.
             view('siswa/kirim', ['error'=>'Pengaduan gagal disimpan: ' . $e->getMessage(), 'old'=>$old]);
         }

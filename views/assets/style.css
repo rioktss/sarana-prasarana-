@@ -534,3 +534,45 @@ button, input, textarea, select { font: inherit; }
     }
     .table td .toolbar .btn { flex: 1; }
 }
+
+/* Foto bukti pengaduan */
+.evidence-file-input {
+    padding: 9px 10px;
+    cursor: pointer;
+}
+.evidence-section {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+.evidence-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.evidence-heading h3 {
+    margin: 0;
+    font-size: 15px;
+}
+.evidence-image-link {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: #f8fafc;
+}
+.evidence-image {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    max-height: 420px;
+    object-fit: contain;
+}
+.evidence-section .helper { margin-top: 7px; }
+
+

@@ -31,6 +31,7 @@ require_once __DIR__ . '/controllers/SiswaController.php';
 $page = isset($_GET['page']) ? $_GET['page'] : (isset($_SESSION['id_user']) ? 'dashboard' : 'login');
 $db = (new Database())->getConnection();
 ensureFeedbackSchema($db);
+ensurePengaduanPhotoSchema($db);
 
 /* Daftar route publik dinyatakan eksplisit. Semua route di luar daftar memerlukan session pengguna, dengan logout diperlakukan khusus supaya pengguna dapat selalu mengakhiri session. */
 $publicPages = ['login', 'proses-login', 'register', 'proses-register'];
@@ -62,6 +63,11 @@ switch ($page) {
     // Dashboard memilih data dan view berbeda menurut role di session.
     case 'dashboard':
         (new DashboardController($db))->index();
+        break;
+
+    // Foto bukti disajikan melalui controller agar hanya admin dan siswa pemilik laporan yang dapat membukanya.
+    case 'foto-bukti':
+        (new PengaduanController($db))->showEvidence();
         break;
 
     // Alur admin pengaduan: daftar, detail, perubahan status, dan feedback.

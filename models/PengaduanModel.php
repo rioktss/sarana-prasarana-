@@ -34,11 +34,11 @@ class PengaduanModel
      * Alasan desain: Prepared statement menjaga input teks tetap terpisah dari SQL; lastInsertId memberi ID yang dibutuhkan untuk membuat progres awal dan membuka detail.
      */
 
-    public function create($idSiswa, $judul, $isi) {
-        // SQL: Query INSERT ini membuat laporan dengan mencatat siswa pemilik, judul, dan isi. Nilai disalurkan lewat prepared statement agar teks input tidak dapat mengubah struktur SQL.
-        $stmt = $this->db->prepare('INSERT INTO pengaduan (id_siswa, judul_pengaduan, isi_pengaduan) VALUES (?, ?, ?)');
-        // Nilai diserahkan sebagai parameter statement, bukan ditempel langsung ke string SQL.
-        $stmt->execute([$idSiswa, $judul, $isi]);
+    public function create($idSiswa, $judul, $isi, $fotoBukti = null) {
+        // SQL: Simpan teks laporan dan path foto bukti (jika ada) dalam satu baris pengaduan.
+        $stmt = $this->db->prepare('INSERT INTO pengaduan (id_siswa, judul_pengaduan, isi_pengaduan, foto_bukti) VALUES (?, ?, ?, ?)');
+        // Prepared statement memisahkan nilai pengguna dari struktur SQL.
+        $stmt->execute([$idSiswa, $judul, $isi, $fotoBukti]);
         return (int) $this->db->lastInsertId();
     }
 

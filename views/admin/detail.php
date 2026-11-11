@@ -49,6 +49,20 @@ require __DIR__ . '/../layout/header.php';
 
                     <div class="detail-description detail-report-content"><?= e($pengaduan['isi_pengaduan']) ?></div>
 
+                    <?php $fotoBukti = isset($pengaduan['foto_bukti']) ? (string) $pengaduan['foto_bukti'] : ''; ?>
+                    <?php if (strpos($fotoBukti, 'uploads/pengaduan/') === 0): ?>
+                        <div class="evidence-section">
+                            <div class="evidence-heading">
+                                <h3>Foto Bukti</h3>
+                                <span class="small muted">Dilampirkan siswa</span>
+                            </div>
+                            <a class="evidence-image-link" href="index.php?page=foto-bukti&id=<?= $idPengaduan ?>" target="_blank" rel="noopener noreferrer">
+                                <img class="evidence-image" src="index.php?page=foto-bukti&amp;id=<?= $idPengaduan ?>" alt="Foto bukti pengaduan">
+                            </a>
+                            <p class="helper">Klik foto untuk melihat ukuran penuh.</p>
+                        </div>
+                    <?php endif; ?>
+
                     <div class="detail-reporter-card">
                         <div class="detail-reporter-avatar" aria-hidden="true"><?= e(strtoupper(substr((string) $pengaduan['nama_siswa'], 0, 1))) ?></div>
                         <div class="detail-reporter-copy">

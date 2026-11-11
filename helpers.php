@@ -108,6 +108,27 @@ function excerpt($text, $length) {
 }
 
 /**
+ * Memastikan kolom foto bukti tersedia pada tabel pengaduan.
+ * @param PDO $db Koneksi database aktif.
+ * @return void Menandai sesi setelah kolom tersedia.
+ * Alasan desain: Instalasi SIPAS yang sudah ada dapat memakai fitur foto tanpa harus menghapus atau membuat ulang tabel pengaduan.
+ */
+function ensurePengaduanPhotoSchema($db) {
+    if (!empty($_SESSION['schema_pengaduan_foto_ok'])) return;
+
+    try {
+        $cols = $db->query("SHOW COLUMNS FROM pengaduan LIKE 'foto_bukti'")->fetchAll();
+        if (empty($cols)) {
+            $db->exec('ALTER TABLE pengaduan ADD COLUMN foto_bukti VARCHAR(255) NULL DEFAULT NULL AFTER isi_pengaduan');
+        }
+
+        $_SESSION['schema_pengaduan_foto_ok'] = true;
+    } catch (Exception $e) {
+        exit('Struktur database belum sesuai. Jalankan database/migrasi_foto_bukti.sql, lalu muat ulang halaman. Detail: ' . $e->getMessage());
+    }
+}
+
+/**
  * Memastikan kolom dan indeks yang dibutuhkan fitur feedback tersedia.
  * @param PDO $db Koneksi database aktif yang berasal dari Database::getConnection().
  * @return void Tidak mengembalikan nilai; menandai sesi bila pengecekan berhasil.

@@ -26,7 +26,8 @@ $title='Kirim Pengaduan - SIPAS'; $menu='kirim'; require __DIR__ . '/../layout/h
             </div>
         <?php endif; ?>
 
-        <form method="post" action="index.php?page=proses-pengaduan" data-loading>
+        <form method="post" action="index.php?page=proses-pengaduan" enctype="multipart/form-data" data-loading>
+            <?= csrfField() ?>
             <div class="form-group">
                 <label class="label required" for="judul_pengaduan">Judul Pengaduan</label>
                 <input class="input" id="judul_pengaduan" name="judul_pengaduan" maxlength="150" value="<?= e($old['judul_pengaduan']) ?>" placeholder="Contoh: Kursi rusak di kelas XII RPL" autocomplete="off" required>
@@ -37,6 +38,12 @@ $title='Kirim Pengaduan - SIPAS'; $menu='kirim'; require __DIR__ . '/../layout/h
                 <label class="label required" for="isi_pengaduan">Isi Pengaduan</label>
                 <textarea class="textarea" id="isi_pengaduan" name="isi_pengaduan" placeholder="Tuliskan detail kerusakan dan lokasinya..." required><?= e($old['isi_pengaduan']) ?></textarea>
                 <div class="helper">Jelaskan kondisi, lokasi, dan dampak kerusakan agar laporan lebih mudah ditindaklanjuti.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="label" for="foto_bukti">Foto Bukti <span class="label-optional">(opsional)</span></label>
+                <input class="input evidence-file-input" id="foto_bukti" name="foto_bukti" type="file" accept="image/jpeg,image/png,image/webp">
+                <div class="helper">Lampirkan foto kondisi sarana yang dilaporkan. Format JPG, PNG, atau WEBP, maksimal 5 MB.</div>
             </div>
 
             <div class="toolbar form-actions">
