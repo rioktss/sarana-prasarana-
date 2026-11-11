@@ -11,7 +11,7 @@
  */
 class Database
 {
-    private $host = '127.0.1.0';
+    private $host = 'localhost';
     private $port = 3306;
     private $username = 'root';
 
@@ -21,9 +21,9 @@ class Database
     // Untuk memaksa pengaturan sendiri, buat file config/database.local.php yang
     // mengembalikan array: ['host'=>..., 'port'=>..., 'username'=>..., 'passwords'=>[...], 'databases'=>[...]]
     // Kredensial ini adalah fallback kompatibilitas untuk lingkungan lokal; jangan gunakan akun root/default pada server produksi.
-    private $passwords = ['root'];
+    private $passwords = [''];
     // Nama database kandidat mengikuti beberapa versi/skema yang disediakan project; file lokal dapat memilih nama yang pasti.
-    private $databases = ['sipas_db1'];
+    private $databases = ['sipas_db'];
 
     /**
      * Memuat pengaturan koneksi lokal opsional tanpa mengharuskan file lokal ada di setiap instalasi.
